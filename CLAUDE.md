@@ -22,6 +22,26 @@ legal defensibility of every signature. Run `npm test` and read the reasoning in
 before changing either. The golden-file hash test failing means every previously signed document
 needs re-verification, not that the test needs updating.
 
+## Environments and origins
+
+| Environment | Origin |
+|---|---|
+| Production | `https://proposals.sorvexai.com` |
+| Local dev | `http://localhost:3000` (default), `http://localhost:3111` (used during this build) |
+
+**Every one of these must be in Supabase → Authentication → URL Configuration → Redirect URLs**, as
+`<origin>/auth/callback`. Supabase does not error on an unlisted redirect — it silently falls back to
+the Site URL, and the user lands somewhere wrong with a `?code=` that nothing consumes.
+
+`APP_URL` must match the environment. It is what share links and email links are built from, and those
+get stored in records and inboxes where they are painful to correct later.
+
+## Before building anything that embeds an origin
+
+Auth callbacks, magic links, webhooks, CORS, share links, email — ask for the exact production domain
+first and state the third-party dashboard settings that must match. These break only after deploy,
+because the code is correct and the configuration nobody asked about is wrong.
+
 ## Verification
 
 ```bash

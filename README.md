@@ -87,6 +87,29 @@ Supabase row is instantly live on the client link.
 
 ---
 
+## Supabase URL configuration (required — do this now)
+
+Supabase keeps its own redirect allowlist. When a requested `emailRedirectTo` is not on it, **it does
+not error** — it silently falls back to the project's Site URL, and the user lands on `/?code=...`
+with nothing to consume the code. That is exactly the failure this section prevents.
+
+**Supabase Dashboard → Authentication → URL Configuration**
+
+| Field | Value |
+|---|---|
+| Site URL | `https://proposals.sorvexai.com` |
+| Redirect URLs | `https://proposals.sorvexai.com/auth/callback`<br>`http://localhost:3000/auth/callback`<br>`http://localhost:3111/auth/callback` |
+
+Add a preview-deploy entry too if you use them (Vercel previews get a new hostname per deployment, so
+a wildcard like `https://*.vercel.app/auth/callback` is the practical option).
+
+`APP_URL` must match the environment it runs in — `http://localhost:3000` locally,
+`https://proposals.sorvexai.com` in production. It is what share links and email links are built from,
+and those get stored in client records and inboxes where they are painful to correct later.
+
+As a safety net, `/` forwards any stray `?code=` to `/auth/callback`, so a Site-URL fallback logs you
+in rather than dead-ending. That is a backstop, not a substitute for the allowlist above.
+
 ## Access control
 
 Three layers, and the middle one is the real gate:
