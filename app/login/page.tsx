@@ -29,7 +29,7 @@ export default async function LoginPage({
             Sign in
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-white/50">
-            We&rsquo;ll email you a link. No password to remember.
+            Sign in to your workspace.
           </p>
         </div>
 

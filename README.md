@@ -60,6 +60,7 @@ Preview routes render the real `ProposalRenderer` against a realistic fixture:
 3. `npm run db:migrate && npm run db:seed`
 4. `npx tsx scripts/setup-storage.ts` — provisions three private buckets
 5. `npx tsx scripts/invite-user.ts you@example.com` — creates the auth identity
+6. `npx tsx scripts/set-password.ts you@example.com` — sets a password (prompts, input hidden)
 
 Step 5 is not optional. Sign-ups are closed and the login form passes
 `shouldCreateUser: false`, so there is deliberately no self-serve path; an account only exists if
@@ -124,7 +125,14 @@ Three layers, and the middle one is the real gate:
 Verified against a real non-allowlisted Supabase account: it authenticates successfully with Supabase,
 is refused at the callback, has its session destroyed, and cannot reach `/dashboard`.
 
-Sign-in is magic-link only. No password is ever set, so there is none to phish, reuse or leak.
+**Password is the default sign-in, not magic link.** Magic link makes sign-in depend on outbound
+email, and Supabase's built-in mailer is capped at a couple of messages an hour and is explicitly not
+for production — locking yourself out of your own tool because an email did not send is a bad trade.
+Magic link stays available in the UI for once real SMTP is configured.
+
+Passwords are set with `scripts/set-password.ts`, which prompts with terminal echo disabled so the
+value never reaches shell history, a process list, or an env file. Minimum 12 characters: this account
+can read every client contract in the system.
 
 ## Conventions
 
