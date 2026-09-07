@@ -8,6 +8,20 @@ import { z } from "zod";
  * NEVER import this from a client component — it would leak secrets into
  * the browser bundle. Client-visible values live in `publicEnv` below.
  */
+/**
+ * An optional variable that may be present but blank.
+ *
+ * `.optional()` alone accepts `undefined` but rejects `""`, and .env files are
+ * full of empty placeholders — `KEY=""` is how you say "not set yet". Without
+ * this, a blank line in .env.local takes the whole app down with a confusing
+ * "expected string to have >=1 characters".
+ */
+const optionalString = () =>
+  z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().min(1).optional(),
+  );
+
 const serverSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 
@@ -15,10 +29,15 @@ const serverSchema = z.object({
   DATABASE_URL: z.string().url(),
   DIRECT_URL: z.string().url(),
 
-  // Supabase
+  // Supabase.
+  // The publishable key is optional here on purpose: it is needed only for
+  // auth and Storage, and requiring it would stop the entire app booting
+  // (including database access and the public proposal viewer, neither of
+  // which touch it). `requireSupabaseBrowserConfig()` below fails loudly at
+  // the point it is actually needed.
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: optionalString(),
+  SUPABASE_SERVICE_ROLE_KEY: optionalString(),
 
   // Access control. Signup is closed; only these addresses may log in.
   ALLOWED_EMAILS: z
@@ -37,7 +56,7 @@ const serverSchema = z.object({
   // AI. `local-cli` shells out to Claude Code on this machine and is
   // hard-gated to non-production; `anthropic-api` is what runs on Vercel.
   AI_PROVIDER: z.enum(["local-cli", "anthropic-api", "disabled"]).default("disabled"),
-  ANTHROPIC_API_KEY: z.string().optional(),
+  ANTHROPIC_API_KEY: optionalString(),
   ANTHROPIC_MODEL: z.string().default("claude-opus-5"),
 
   // Feature flags
@@ -83,3 +102,25 @@ function loadServerEnv() {
 export const env = loadServerEnv();
 
 export type ServerEnv = typeof env;
+
+/**
+ * Supabase browser config, asserted at the point of use.
+ *
+ * Auth and Storage need the publishable key; the database and the public
+ * proposal viewer do not. Checking here rather than at boot means a missing key
+ * breaks sign-in with a clear message instead of taking the whole app down.
+ */
+export function requireSupabaseBrowserConfig() {
+  if (!env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
+    throw new Error(
+      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is not set, so Supabase Auth and " +
+        "Storage cannot be used. Find it in your Supabase project under " +
+        "Settings -> API Keys (it starts with \"sb_publishable_\") and add it " +
+        "to .env.local.",
+    );
+  }
+  return {
+    url: env.NEXT_PUBLIC_SUPABASE_URL,
+    publishableKey: env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  };
+}

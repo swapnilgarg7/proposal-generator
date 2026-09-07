@@ -22,7 +22,6 @@
     "@prisma/client": "^7.10.0",
     "@supabase/ssr": "^0.12.6",
     "@supabase/supabase-js": "^2.116.0",
-    "canonicalize": "^4.0.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "framer-motion": "^13.2.0",

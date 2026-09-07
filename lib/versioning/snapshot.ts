@@ -1,5 +1,4 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import canonicalize from "canonicalize";
 import { z } from "zod";
 import { proposalBlockSchema } from "@/lib/blocks/schemas";
 
@@ -89,9 +88,76 @@ export type ProposalSnapshot = z.infer<typeof proposalSnapshotSchema>;
  *
  * RFC 8785 fixes this: keys sorted by UTF-16 code unit, no insignificant
  * whitespace, and a single normalised number representation.
+ *
+ * Implemented here rather than taken from a package. It is forty lines, it is
+ * the single most load-bearing function in the product, and an unannounced
+ * upstream change to it would silently invalidate every signature already
+ * collected. The golden-file test in tests/hashing.test.ts pins the output.
+ *
+ * Two details that carry the spec:
+ *  - `Object.keys().sort()` uses JavaScript's default string comparison, which
+ *    is ordinal over UTF-16 code units — exactly what RFC 8785 mandates.
+ *  - Number and string serialisation delegate to JSON.stringify, whose output
+ *    is ECMAScript Number::toString and minimal JSON escaping, also what the
+ *    spec requires.
  */
+function canonicalizeValue(value: unknown): string | undefined {
+  if (value === null) return "null";
+
+  const t = typeof value;
+
+  if (t === "boolean") return value ? "true" : "false";
+
+  if (t === "number") {
+    const n = value as number;
+    if (!Number.isFinite(n)) {
+      throw new Error(
+        `Cannot canonicalise the non-finite number ${String(n)}. NaN and Infinity ` +
+          `have no JSON representation, so hashing them is not well defined.`,
+      );
+    }
+    return JSON.stringify(n);
+  }
+
+  if (t === "string") return JSON.stringify(value);
+
+  if (t === "bigint") {
+    throw new Error("Cannot canonicalise a BigInt: it has no JSON representation.");
+  }
+
+  if (Array.isArray(value)) {
+    // Array order is semantic and is preserved. Holes and undefined entries
+    // become null, matching JSON.stringify.
+    const items = value.map((v) => canonicalizeValue(v) ?? "null");
+    return `[${items.join(",")}]`;
+  }
+
+  if (t === "object") {
+    const obj = value as Record<string, unknown>;
+
+    // Honour toJSON (Date, and anything else that opts in) before inspecting
+    // own keys, exactly as JSON.stringify does.
+    const toJSON = (obj as { toJSON?: unknown }).toJSON;
+    if (typeof toJSON === "function") {
+      return canonicalizeValue((toJSON as () => unknown).call(obj));
+    }
+
+    const parts: string[] = [];
+    for (const key of Object.keys(obj).sort()) {
+      const serialised = canonicalizeValue(obj[key]);
+      // Undefined-valued keys are omitted, matching JSON.stringify.
+      if (serialised === undefined) continue;
+      parts.push(`${JSON.stringify(key)}:${serialised}`);
+    }
+    return `{${parts.join(",")}}`;
+  }
+
+  // undefined, function, symbol
+  return undefined;
+}
+
 export function canonicalJson(value: unknown): string {
-  const out = canonicalize(value);
+  const out = canonicalizeValue(value);
   if (out === undefined) {
     throw new Error(
       "Value could not be canonicalised. Snapshots must be plain JSON — no " +

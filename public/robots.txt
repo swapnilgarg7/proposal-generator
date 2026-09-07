@@ -1,0 +1,7 @@
+# Proposal links are private. The URL is the credential.
+User-agent: *
+Disallow: /p/
+Disallow: /proposals/
+Disallow: /clients/
+Disallow: /settings
+Disallow: /preview

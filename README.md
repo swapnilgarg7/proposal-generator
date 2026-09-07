@@ -14,16 +14,19 @@ See [`plan.md`](./plan.md) for the full architecture and phase plan.
 
 | Phase | State |
 |---|---|
-| 0 — Foundation | Done, except Supabase provisioning |
-| 1 — Document model & renderer | Done |
+| 0 — Foundation | **Done.** Supabase connected, migrated, RLS locked down, seeded |
+| 1 — Document model & renderer | **Done** |
 | 2 — Editor | Not started |
 | 3 — Agency blocks | Renderers done; editors not started |
-| 4 — Public link, e-sign, PDF, email | Not started |
+| 4 — Public link, e-sign, PDF, email | Public link **done**; signing, PDF and email not started |
 | 5 — Payments | Not started |
 | 6 — AI generation | Not started |
 
-**Blocked on:** a Supabase project. Migrations, seeding and auth cannot run without it. Everything
-built so far runs and is tested without it — see the preview routes below.
+A seeded proposal is live end to end: database → frozen snapshot → public tokenised link, with a
+hash-chained audit trail recording every view. Run `npm run db:seed` and it prints the share link.
+
+**Outstanding:** `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is not set, so Supabase Auth and Storage are
+unavailable. Everything else works without it — the app boots and the public viewer serves fine.
 
 ---
 
@@ -55,6 +58,12 @@ Preview routes render the real `ProposalRenderer` against a realistic fixture:
      erroring, which is a miserable thing to debug.
    - **`NEXT_PUBLIC_SUPABASE_URL`** and **`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`** — Settings → API.
 3. `npm run db:migrate && npm run db:seed`
+
+Two migrations run: the schema, and a raw-SQL one that enables Row Level Security with **zero
+policies** on every table. Supabase exposes PostgREST over the same database and the publishable key
+ships to the browser, so without this anyone could read signed contracts and payment records straight
+off the REST API. Prisma connects as the table owner and owners bypass RLS, so application queries are
+unaffected.
 
 ## AI provider
 

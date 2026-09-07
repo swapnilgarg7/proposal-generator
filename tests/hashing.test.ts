@@ -294,3 +294,79 @@ describe("audit chain", () => {
     expect(verifyEventChain(events).valid).toBe(false);
   });
 });
+
+/**
+ * Edge cases for the in-house RFC 8785 implementation. These matter because the
+ * canonicaliser is no longer a third-party package: if it drifts, every
+ * signature collected so far silently stops verifying.
+ */
+describe("canonicalJson — RFC 8785 conformance", () => {
+  it("sorts nested object keys, not just top-level ones", () => {
+    const a = { outer: { zebra: 1, apple: { yak: 1, ant: 2 } } };
+    const b = { outer: { apple: { ant: 2, yak: 1 }, zebra: 1 } };
+    expect(canonicalJson(a)).toBe(canonicalJson(b));
+    expect(canonicalJson(a)).toBe('{"outer":{"apple":{"ant":2,"yak":1},"zebra":1}}');
+  });
+
+  it("sorts by UTF-16 code unit, so uppercase precedes lowercase", () => {
+    expect(canonicalJson({ a: 1, B: 2, A: 3 })).toBe('{"A":3,"B":2,"a":1}');
+  });
+
+  it("emits no insignificant whitespace", () => {
+    expect(canonicalJson({ a: [1, 2], b: "x" })).toBe('{"a":[1,2],"b":"x"}');
+  });
+
+  it("preserves array order inside sorted objects", () => {
+    expect(canonicalJson({ z: [3, 1, 2], a: 1 })).toBe('{"a":1,"z":[3,1,2]}');
+  });
+
+  it("omits undefined-valued keys, matching JSON.stringify", () => {
+    expect(canonicalJson({ a: 1, b: undefined, c: 3 })).toBe('{"a":1,"c":3}');
+  });
+
+  it("renders undefined array entries as null, matching JSON.stringify", () => {
+    expect(canonicalJson([1, undefined, 3])).toBe("[1,null,3]");
+  });
+
+  it("preserves null, which is a value rather than an absence", () => {
+    expect(canonicalJson({ a: null })).toBe('{"a":null}');
+  });
+
+  it("escapes strings the way JSON does", () => {
+    expect(canonicalJson({ s: 'a"b\\c\nd\te' })).toBe('{"s":"a\\"b\\\\c\\nd\\te"}');
+  });
+
+  it("handles non-ASCII without mangling it", () => {
+    expect(canonicalJson({ s: "Ascend – Behavior · £4,999 → ₹5,00,000" })).toContain("→");
+  });
+
+  it("normalises number representation", () => {
+    expect(canonicalJson({ n: 1.0 })).toBe('{"n":1}');
+    expect(canonicalJson({ n: 1e2 })).toBe('{"n":100}');
+    expect(canonicalJson({ n: -0 })).toBe('{"n":0}');
+  });
+
+  it("rejects non-finite numbers instead of hashing something meaningless", () => {
+    // A NaN reaching a contract hash means a calculation went wrong upstream.
+    // Failing loudly beats committing a hash over "null".
+    expect(() => canonicalJson({ n: Number.NaN })).toThrow(/non-finite/i);
+    expect(() => canonicalJson({ n: Infinity })).toThrow(/non-finite/i);
+  });
+
+  it("rejects BigInt rather than coercing it", () => {
+    // BigInt(1) rather than the 1n literal: the tsconfig target is ES2017.
+    expect(() => canonicalJson({ n: BigInt(1) })).toThrow(/BigInt/i);
+  });
+
+  it("honours toJSON, so a stray Date serialises rather than hashing as {}", () => {
+    const d = new Date("2026-09-07T00:00:00.000Z");
+    expect(canonicalJson({ at: d })).toBe('{"at":"2026-09-07T00:00:00.000Z"}');
+  });
+
+  it("survives a full JSON round trip unchanged", () => {
+    const snap = baseSnapshot();
+    const once = canonicalJson(toSignable(snap));
+    const twice = canonicalJson(JSON.parse(once));
+    expect(twice).toBe(once);
+  });
+});
