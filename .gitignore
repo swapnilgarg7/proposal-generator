@@ -43,7 +43,8 @@ next-env.d.ts
 # Prisma generated client
 /lib/generated
 
-# Local env
+# Local env — .env.example is intentionally tracked (see negation below)
 .env
 .env.local
 .env*.local
+!.env.example
