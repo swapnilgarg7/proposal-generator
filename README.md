@@ -15,7 +15,7 @@ See [`plan.md`](./plan.md) for the full architecture and phase plan.
 | Phase | State |
 |---|---|
 | 0 — Foundation | **Done.** Supabase connected, migrated, RLS locked down, seeded |
-| 1 — Document model & renderer | **Done** |
+| 1 — Document model, renderer, auth | **Done** |
 | 2 — Editor | Not started |
 | 3 — Agency blocks | Renderers done; editors not started |
 | 4 — Public link, e-sign, PDF, email | Public link **done**; signing, PDF and email not started |
@@ -25,8 +25,8 @@ See [`plan.md`](./plan.md) for the full architecture and phase plan.
 A seeded proposal is live end to end: database → frozen snapshot → public tokenised link, with a
 hash-chained audit trail recording every view. Run `npm run db:seed` and it prints the share link.
 
-**Outstanding:** `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is not set, so Supabase Auth and Storage are
-unavailable. Everything else works without it — the app boots and the public viewer serves fine.
+Auth is live: magic-link sign-in, no signup route, and a hard email allowlist re-checked on every
+request. Storage buckets are provisioned and private.
 
 ---
 
@@ -58,6 +58,13 @@ Preview routes render the real `ProposalRenderer` against a realistic fixture:
      erroring, which is a miserable thing to debug.
    - **`NEXT_PUBLIC_SUPABASE_URL`** and **`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`** — Settings → API.
 3. `npm run db:migrate && npm run db:seed`
+4. `npx tsx scripts/setup-storage.ts` — provisions three private buckets
+5. `npx tsx scripts/invite-user.ts you@example.com` — creates the auth identity
+
+Step 5 is not optional. Sign-ups are closed and the login form passes
+`shouldCreateUser: false`, so there is deliberately no self-serve path; an account only exists if
+someone holding the service role key creates it. The script refuses any address not in
+`ALLOWED_EMAILS`, since such an account could never sign in anyway.
 
 Two migrations run: the schema, and a raw-SQL one that enables Row Level Security with **zero
 policies** on every table. Supabase exposes PostgREST over the same database and the publishable key
@@ -79,6 +86,22 @@ The intended workflow is **draft locally, serve globally**: generate on your Max
 Supabase row is instantly live on the client link.
 
 ---
+
+## Access control
+
+Three layers, and the middle one is the real gate:
+
+1. No signup route exists, and the login form passes `shouldCreateUser: false`.
+2. **`ALLOWED_EMAILS` is re-checked on every protected request**, not once at the callback. Supabase
+   will happily issue a magic link to any address it knows about, so a valid session for a
+   non-allowlisted account is torn down immediately rather than left to fail later. Revoking access is
+   an env change, not a session hunt.
+3. RLS denies PostgREST everything, so the publishable key in the browser is inert.
+
+Verified against a real non-allowlisted Supabase account: it authenticates successfully with Supabase,
+is refused at the callback, has its session destroyed, and cannot reach `/dashboard`.
+
+Sign-in is magic-link only. No password is ever set, so there is none to phish, reuse or leak.
 
 ## Conventions
 
