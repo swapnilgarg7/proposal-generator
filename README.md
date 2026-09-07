@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sorvex Proposals
 
-## Getting Started
+Proposal, e-signature and payment platform for **SorvexAI**. Clients open a tokenised link, pick a
+pricing tier, e-sign, and optionally pay — without creating an account.
 
-First, run the development server:
+Single-tenant in practice, multi-tenant in schema: only allowlisted addresses can log in and there is
+no signup route, but every row carries `organizationId` so opening it up later is a flag, not a rewrite.
+
+See [`plan.md`](./plan.md) for the full architecture and phase plan.
+
+---
+
+## Status
+
+| Phase | State |
+|---|---|
+| 0 — Foundation | Done, except Supabase provisioning |
+| 1 — Document model & renderer | Done |
+| 2 — Editor | Not started |
+| 3 — Agency blocks | Renderers done; editors not started |
+| 4 — Public link, e-sign, PDF, email | Not started |
+| 5 — Payments | Not started |
+| 6 — AI generation | Not started |
+
+**Blocked on:** a Supabase project. Migrations, seeding and auth cannot run without it. Everything
+built so far runs and is tested without it — see the preview routes below.
+
+---
+
+## Running it
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # http://localhost:3000
+npm test             # 48 tests, no database needed
+npm run typecheck
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Preview routes render the real `ProposalRenderer` against a realistic fixture:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Route | Shows |
+|---|---|
+| `/preview` | Dark theme, tier selection interactive |
+| `/preview?theme=light` | Light theme |
+| `/preview?print=1` | Print/PDF mode — forces light, disables interaction |
+| `/preview?agreement=upwork` | External-agreement branch (contract signed on Upwork) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Setting up Supabase
 
-## Learn More
+1. Create a project at [supabase.com](https://supabase.com).
+2. Copy `.env.example` to `.env.local` and fill in:
+   - **`DATABASE_URL`** — Settings → Database → Connection string → **Transaction pooler** (port `6543`).
+   - **`DIRECT_URL`** — the same page's **Direct connection** (port `5432`).
+     Migrations must use this. Over the transaction pooler `prisma migrate` hangs silently rather than
+     erroring, which is a miserable thing to debug.
+   - **`NEXT_PUBLIC_SUPABASE_URL`** and **`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`** — Settings → API.
+3. `npm run db:migrate && npm run db:seed`
 
-To learn more about Next.js, take a look at the following resources:
+## AI provider
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`AI_PROVIDER` selects the implementation:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Value | Behaviour |
+|---|---|
+| `local-cli` | Shells out to Claude Code on this machine, using your Max plan. **Hard-gated: the app refuses to boot with this set when `NODE_ENV=production`**, because it needs a local Claude Code session and cannot work on Vercel. |
+| `anthropic-api` | Standard API calls. Requires `ANTHROPIC_API_KEY`. This is what runs in production. |
+| `disabled` | AI drafting off; everything else works. |
 
-## Deploy on Vercel
+The intended workflow is **draft locally, serve globally**: generate on your Max plan, and the same
+Supabase row is instantly live on the client link.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Conventions
+
+Matched to `sorvex-landing` so this reads as the same codebase family:
+
+- **No `src/` directory.** `@/*` maps to the project root.
+- **Tailwind v4, CSS-first.** All tokens live in `app/globals.css` under `@theme inline`. There is no
+  `tailwind.config` file and adding one would split the source of truth.
+- Two token sets: `--color-*` for app chrome (always dark), `--doc-*` for the proposal document
+  (themes independently, set via `[data-doc-theme]`).
+- Money is **always** an integer in minor units plus a currency code. Never a float, never a formatted
+  string in the database.
+- Money renders with the **sans** face and tabular figures, never mono — Geist Mono gives the comma a
+  full character cell, so `$3,499` comes out as `$3 , 499`.
+
+## Things that will bite you if you change them carelessly
+
+- **`lib/versioning/snapshot.ts`** — canonicalisation and hashing. `JSON.stringify` is not a stable
+  hash input: key order follows insertion order and JSONB round-trips reorder it, so signed documents
+  would fail their own verification for no visible reason. Changing `toSignable()` changes every hash;
+  the golden-file test in `tests/hashing.test.ts` exists to make that impossible to do by accident.
+- **`ProposalRenderer` must stay a pure function of a snapshot.** The moment it reads live state, the
+  web viewer and the sealed PDF can disagree about what was signed.
+- **The public page must render `publishedVersionId`'s snapshot**, never live `ProposalBlock` rows.
+  Otherwise a proposal can be edited out from under a client mid-signature.
+- **Anything animated needs `data-reveal`.** Scroll-reveal entrance states sit at `opacity: 0`, and
+  headless Chromium captures that state — producing a blank PDF.
