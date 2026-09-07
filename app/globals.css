@@ -1,26 +1,249 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ═══════════════════════════════════════════════════════════════
+   Sorvex Proposals — Design Tokens
+   Brand palette inherited verbatim from sorvex-landing/app/globals.css
+   so this app reads as the same codebase family.
+   ═══════════════════════════════════════════════════════════════ */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* ── App chrome (always dark — this is the internal tool) ── */
+  --color-background: #0A0A0A;
+  --color-foreground: #EDEDED;
+  --color-surface: #111111;
+  --color-border: rgba(255, 255, 255, 0.08);
+
+  /* ── Accent palette ── */
+  --color-accent-purple: #8B5CF6;
+  --color-accent-pink: #EC4899;
+  --color-accent-blue: #3B82F6;
+  --color-accent-indigo: #6366F1;
+  --color-accent-violet: #A855F7;
+
+  /* ── Semantic ── */
+  --color-success: #34D399;
+  --color-warning: #FBBF24;
+  --color-danger: #F87171;
+
+  /* ── Elevated app surfaces ── */
+  --color-surface-2: #0D0D11;
+  --color-surface-3: #16161C;
+
+  /* ── Gradients ── */
+  --gradient-brand: linear-gradient(135deg, #8B5CF6 0%, #EC4899 50%, #3B82F6 100%);
+  --gradient-subtle: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(236, 72, 153, 0.15) 100%);
+
+  /* ── Typography ── */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ═══════════════════════════════════════════════════════════════
+   Document theme tokens
+   The PROPOSAL renders in its own theme, independent of app chrome.
+   Set via [data-doc-theme] on the renderer root. The PDF pipeline
+   always forces "light" — dark documents print badly and clients
+   forward PDFs into procurement.
+   ═══════════════════════════════════════════════════════════════ */
+
+[data-doc-theme="dark"] {
+  --doc-bg: #0A0A0A;
+  --doc-bg-elevated: #111111;
+  --doc-bg-inset: #08080A;
+  --doc-fg: #EDEDED;
+  --doc-fg-muted: #A1A1AA;
+  --doc-fg-subtle: #71717A;
+  --doc-border: rgba(255, 255, 255, 0.08);
+  --doc-border-strong: rgba(255, 255, 255, 0.16);
+  --doc-accent: #A855F7;
+  --doc-accent-contrast: #FFFFFF;
+  --doc-success: #34D399;
+  --doc-warning: #FBBF24;
+  --doc-danger: #F87171;
+  --doc-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+[data-doc-theme="light"] {
+  --doc-bg: #FFFFFF;
+  --doc-bg-elevated: #FAFAFA;
+  --doc-bg-inset: #F4F4F5;
+  --doc-fg: #18181B;
+  --doc-fg-muted: #52525B;
+  --doc-fg-subtle: #71717A;
+  --doc-border: rgba(0, 0, 0, 0.10);
+  --doc-border-strong: rgba(0, 0, 0, 0.18);
+  --doc-accent: #7C3AED;
+  --doc-accent-contrast: #FFFFFF;
+  --doc-success: #059669;
+  --doc-warning: #B45309;
+  --doc-danger: #DC2626;
+  --doc-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Base
+   ═══════════════════════════════════════════════════════════════ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background-color: #0A0A0A;
+  color: #EDEDED;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Brand utilities (ported verbatim from sorvex-landing)
+   ═══════════════════════════════════════════════════════════════ */
+
+.text-gradient-brand {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-purple-pink {
+  background: linear-gradient(135deg, #A855F7 0%, #EC4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-blue-purple {
+  background: linear-gradient(135deg, #3B82F6 0%, #A855F7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.border-gradient-brand {
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+}
+
+.border-gradient-brand::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--gradient-brand);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.glow-purple { box-shadow: 0 0 40px rgba(139, 92, 246, 0.3); }
+.glow-pink   { box-shadow: 0 0 40px rgba(236, 72, 153, 0.3); }
+
+/* ── Numerals ──────────────────────────────────────────────────
+   Money uses the SANS face with tabular figures, never the mono face.
+   Geist Mono gives the comma a full character cell, so "$3,499" renders
+   as "$3 , 499" — which looks like a bug to a client reading a price.
+   Tabular sans keeps digits column-aligned without that artefact. */
+.money {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Mobile performance: kill expensive blurs, matching landing-site behaviour */
+@media (max-width: 767px) {
+  .glass,
+  [style*="backdrop-filter"],
+  [style*="backdropFilter"] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  * { will-change: auto; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Print / PDF
+   CRITICAL: scroll-reveal animations leave elements at opacity:0.
+   Headless Chromium captures that state and produces a BLANK PDF.
+   Everything animated carries [data-reveal]; this forces it visible.
+   The renderer additionally skips animation init when ?print=1.
+   ═══════════════════════════════════════════════════════════════ */
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html, body {
+    background: #FFFFFF !important;
+    color: #18181B !important;
+  }
+
+  [data-reveal],
+  [data-reveal] * {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .glass {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .doc-page-break    { break-before: page; page-break-before: always; }
+  .doc-avoid-break   { break-inside: avoid; page-break-inside: avoid; }
+
+  [data-print-hide] { display: none !important; }
+}
+
+/* Same guarantees when rendering to PDF via ?print=1 (screen media) */
+[data-print-mode="true"] [data-reveal],
+[data-print-mode="true"] [data-reveal] * {
+  opacity: 1 !important;
+  transform: none !important;
+  animation: none !important;
+  transition: none !important;
 }

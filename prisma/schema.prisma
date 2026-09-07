@@ -1,0 +1,674 @@
+// Sorvex Proposals — data model
+//
+// Design rules encoded here:
+//  1. Multi-tenant in schema, single-tenant in practice. Every content row
+//     carries organizationId so opening signups later is a flag, not a rewrite.
+//  2. Library is relational; document content is JSON. ProposalBlock.data holds
+//     tiers, vendor costs, milestones — validated by Zod, not by the DB. This is
+//     what makes ProposalVersion.snapshot a faithful, cheap freeze of the doc.
+//  3. Signed documents are immutable. Edits fork a version; a Signature always
+//     points at the contentHash it actually signed.
+//  4. Idempotency is a unique index, never application logic.
+//  5. Money is always (amountMinor Int, currency). Stripe cents, Razorpay paise.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Tenancy & identity
+// ═══════════════════════════════════════════════════════════════
+
+model Organization {
+  id        String @id @default(cuid())
+  slug      String @unique
+  name      String // display name, e.g. "SorvexAI"
+  legalName String? // registered entity name, for contracts
+
+  // Brand
+  logoPath      String?
+  primaryColor  String  @default("#8B5CF6")
+  accentColor   String  @default("#EC4899")
+  tertiaryColor String  @default("#3B82F6")
+
+  // Contact / legal identity
+  email          String
+  website        String?
+  phone          String?
+  addressLine1   String?
+  addressLine2   String?
+  city           String?
+  state          String?
+  postalCode     String?
+  country        String?
+  taxId          String?
+  governingLaw   String?
+  bookingUrl     String?
+
+  // Proposal defaults
+  defaultCurrency     String   @default("USD")
+  defaultTheme        DocTheme @default(DARK)
+  defaultValidityDays Int      @default(30)
+  defaultTerms        String?  @db.Text
+  signatureBlockName  String?
+  signatureBlockTitle String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users            User[]
+  clients          Client[]
+  proposals        Proposal[]
+  serviceCatalog   ServiceCatalogItem[]
+  blueprintRequest BlueprintRequest[]
+  aiJobs           AiJob[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             String @id @default(cuid())
+  supabaseUserId String @unique
+  email          String @unique
+  name           String?
+  avatarPath     String?
+  role           Role   @default(OWNER)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([organizationId])
+  @@map("users")
+}
+
+enum Role {
+  OWNER
+  MEMBER
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CRM
+// ═══════════════════════════════════════════════════════════════
+
+model Client {
+  id       String  @id @default(cuid())
+  company  String
+  website  String?
+  industry String?
+  logoPath String?
+  notes    String? @db.Text
+
+  // Provenance — set when imported from a lead list or the blueprint funnel.
+  source String?
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contacts  Contact[]
+  proposals Proposal[]
+
+  @@index([organizationId])
+  @@map("clients")
+}
+
+/// The signer. Kept first-class rather than denormalised onto Client because
+/// "who is authorised to sign" is a real concept in the signature flow, and
+/// multiple signers is a near-term feature.
+model Contact {
+  id      String  @id @default(cuid())
+  name    String
+  email   String
+  title   String?
+  phone   String?
+  isPrimary Boolean @default(false)
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  proposals Proposal[]
+
+  @@index([clientId])
+  @@map("contacts")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Proposals
+// ═══════════════════════════════════════════════════════════════
+
+model Proposal {
+  id    String @id @default(cuid())
+  title String
+
+  status ProposalStatus @default(DRAFT)
+  theme  DocTheme       @default(DARK)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  /// Designated signer for this proposal.
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  // ── Public access ──
+  /// SHA-256 of the 128-bit share token. The token itself is never stored, so
+  /// a database read cannot hand over every live proposal link.
+  publicTokenHash String?   @unique
+  passcodeHash    String?
+  expiresAt       DateTime?
+  revokedAt       DateTime?
+
+  // ── Commercial terms, frozen at tier selection ──
+  currency               String  @default("USD")
+  selectedTierKey        String?
+  selectedTierLabel      String?
+  selectedTierAmountMinor Int?
+  addOnsAmountMinor      Int     @default(0)
+  totalAmountMinor       Int?
+
+  // ── Payment policy (the per-proposal toggle) ──
+  paymentEnabled  Boolean          @default(false)
+  paymentProvider PaymentProvider?
+  paymentTiming   PaymentTiming    @default(NONE)
+  depositPercent  Int?
+
+  // ── Agreement mode ──
+  /// Where the contract is actually executed. INLINE_ESIGN keeps the whole
+  /// acceptance in this document. The EXTERNAL_* modes mean the proposal is a
+  /// pitch and the binding agreement is signed elsewhere (Upwork contract,
+  /// separate MSA) — in which case the signature block becomes a next-steps
+  /// hand-off and NO e-signature or certificate is produced, because claiming
+  /// one would misrepresent what happened.
+  agreementMode        AgreementMode @default(INLINE_ESIGN)
+  externalAgreementUrl String?
+  externalAgreementNote String?      @db.Text
+
+  // ── Scheduling ──
+  projectStartDate DateTime?
+  validUntil       DateTime?
+
+  /// A template is a proposal with a flag, not a separate table.
+  isTemplate Boolean @default(false)
+
+  /// The version the public link serves. The public page reads THIS and never
+  /// live ProposalBlock rows — otherwise a proposal could be edited out from
+  /// under a client mid-signature.
+  publishedVersionId String?          @unique
+  publishedVersion   ProposalVersion? @relation("PublishedVersion", fields: [publishedVersionId], references: [id], onDelete: SetNull)
+  publishedAt        DateTime?
+
+  sentAt      DateTime?
+  firstViewedAt DateTime?
+  signedAt    DateTime?
+  acceptedAt  DateTime?
+  declinedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  blocks    ProposalBlock[]
+  versions  ProposalVersion[] @relation("ProposalVersions")
+  signatures Signature[]
+  payments  Payment[]
+  events    ProposalEvent[]
+  otpChallenges OtpChallenge[]
+
+  @@index([organizationId, status])
+  @@index([clientId])
+  @@map("proposals")
+}
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  VIEWED
+  TIER_SELECTED
+  SIGNED
+  AWAITING_PAYMENT
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum DocTheme {
+  DARK
+  LIGHT
+}
+
+enum AgreementMode {
+  /// Client signs inside this proposal. Produces a Signature, a sealed PDF and
+  /// a certificate page.
+  INLINE_ESIGN
+  /// Contract is executed as an Upwork contract. The client approves the
+  /// proposal here; the binding agreement happens on Upwork.
+  EXTERNAL_UPWORK
+  /// Contract executed via some other external instrument (MSA, DocuSign).
+  EXTERNAL_OTHER
+}
+
+/// Draft content. Identity + ordering only; the payload lives in `data` and is
+/// validated by a per-type Zod schema in lib/blocks/schemas.ts.
+model ProposalBlock {
+  id            String    @id @default(cuid())
+  proposalId    String
+  proposal      Proposal  @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  type          BlockType
+  order         Int
+  data          Json
+  schemaVersion Int       @default(1)
+  visible       Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([proposalId, order])
+  @@map("proposal_blocks")
+}
+
+enum BlockType {
+  COVER
+  PROBLEM_STATEMENT
+  RICH_TEXT
+  SCOPE_OF_WORK
+  PRICING_TIERS
+  ADD_ONS
+  SERVICE_COSTS
+  TIER_LIMITS
+  TIMELINE
+  TERMS
+  BLUEPRINT_OFFER
+  PAYMENT
+  SIGNATURE
+}
+
+/// Immutable freeze of a document. `snapshot` is exactly the shape the renderer
+/// consumes, so web view, PDF and email preview share one render path.
+model ProposalVersion {
+  id            String   @id @default(cuid())
+  proposalId    String
+  proposal      Proposal @relation("ProposalVersions", fields: [proposalId], references: [id], onDelete: Cascade)
+  versionNumber Int
+
+  snapshot Json
+  /// SHA-256 over RFC 8785 canonical JSON of toSignable(snapshot).
+  /// JSON.stringify is NOT stable enough for this: key order follows insertion
+  /// order and JSONB round-trips reorder it, which would spuriously invalidate
+  /// signed documents.
+  contentHash String
+
+  /// Sealed PDF for this version, in a private Storage bucket.
+  pdfPath      String?
+  pdfSha256    String?
+  pdfBytes     Int?
+  pdfRenderedAt DateTime?
+
+  createdAt DateTime @default(now())
+  createdBy String?
+
+  signatures Signature[]
+  published  Proposal?   @relation("PublishedVersion")
+
+  @@unique([proposalId, versionNumber])
+  @@index([contentHash])
+  @@map("proposal_versions")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Signing
+// ═══════════════════════════════════════════════════════════════
+
+/// One-time code sent to the contact address ON RECORD (never one the visitor
+/// types). Without this, a typed name plus an IP proves only that somebody had
+/// the link — which is not identity binding.
+model OtpChallenge {
+  id         String   @id @default(cuid())
+  proposalId String
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  email     String
+  codeHash  String
+  attempts  Int      @default(0)
+  maxAttempts Int    @default(5)
+  expiresAt DateTime
+  consumedAt DateTime?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([proposalId, email])
+  @@map("otp_challenges")
+}
+
+model Signature {
+  id         String   @id @default(cuid())
+  proposalId String
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  versionId  String
+  version    ProposalVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
+
+  signerName  String
+  signerEmail String
+  signerTitle String?
+
+  /// Identity binding: when the OTP to the on-record address was verified.
+  emailVerifiedAt DateTime?
+  otpChallengeId  String?
+
+  method    SignatureMethod
+  /// Rendered signature image, private bucket.
+  imagePath String?
+  /// Raw stroke points + timestamps for DRAWN signatures. A few KB, and stroke
+  /// dynamics are far more probative than a flat PNG in a forgery dispute.
+  strokeData Json?
+
+  ip        String?
+  userAgent String?
+  /// Coarse geo derived from IP at signing time, for the certificate.
+  geoCountry String?
+  geoRegion  String?
+
+  /// Verbatim consent text shown, plus its version, so the certificate can
+  /// reproduce exactly what was agreed to.
+  consentText    String @db.Text
+  consentVersion String
+
+  /// Hash of the document content as signed.
+  contentHash String
+  /// Hash of the exact PDF bytes the signer was shown. This is the artifact a
+  /// human can look at in a dispute.
+  documentHash String?
+
+  /// RFC 3161 token from a trusted timestamp authority — third-party proof of
+  /// *when*, the one thing that cannot be self-attested.
+  timestampToken String? @db.Text
+  timestampTsa   String?
+
+  signedAt DateTime @default(now())
+
+  @@index([proposalId])
+  @@index([versionId])
+  @@map("signatures")
+}
+
+enum SignatureMethod {
+  TYPED
+  DRAWN
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Payments
+// ═══════════════════════════════════════════════════════════════
+
+model Payment {
+  id         String   @id @default(cuid())
+  proposalId String
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  provider          PaymentProvider
+  /// Provider's payment/charge id. Unique per provider so a duplicate webhook
+  /// delivery is a constraint violation, not a double-count.
+  providerPaymentId String
+  providerOrderId   String?
+
+  amountMinor Int
+  currency    String
+  kind        PaymentKind
+  status      PaymentStatus @default(PENDING)
+
+  paidAt     DateTime?
+  refundedAt DateTime?
+  failureReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, providerPaymentId])
+  @@index([proposalId])
+  @@map("payments")
+}
+
+/// Raw webhook envelopes. Insert first, inside the transaction: if the unique
+/// insert throws, the event is a replay — return 200 and stop. That is the
+/// entire idempotency strategy.
+model PaymentEvent {
+  id              String          @id @default(cuid())
+  provider        PaymentProvider
+  providerEventId String
+  eventType       String
+  payload         Json
+  signatureValid  Boolean
+  processedAt     DateTime?
+  processingError String?
+  receivedAt      DateTime        @default(now())
+
+  @@unique([provider, providerEventId])
+  @@index([eventType])
+  @@map("payment_events")
+}
+
+enum PaymentProvider {
+  STRIPE
+  RAZORPAY
+}
+
+enum PaymentKind {
+  DEPOSIT
+  FINAL
+  FULL
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  DISPUTED
+}
+
+/// One policy field instead of a tangle of booleans. Acceptance is derived:
+/// isAccepted = signatureExists && policySatisfied.
+enum PaymentTiming {
+  NONE
+  DEPOSIT_BEFORE_SIGN
+  DEPOSIT_AFTER_SIGN
+  FULL_AFTER_SIGN
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Audit & analytics
+// ═══════════════════════════════════════════════════════════════
+
+/// Hash-chained so the trail is tamper-evident rather than merely "a table I
+/// control". eventHash = sha256(prevEventHash + canonicalJson(payload)).
+model ProposalEvent {
+  id         String            @id @default(cuid())
+  proposalId String
+  proposal   Proposal          @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  type       ProposalEventType
+  meta       Json?
+
+  ip        String?
+  userAgent String?
+
+  prevEventHash String?
+  eventHash     String
+
+  at DateTime @default(now())
+
+  @@index([proposalId, at])
+  @@map("proposal_events")
+}
+
+enum ProposalEventType {
+  CREATED
+  PUBLISHED
+  SENT
+  VIEWED
+  BLOCK_VIEWED
+  TIER_SELECTED
+  OTP_SENT
+  OTP_VERIFIED
+  CONSENT_GIVEN
+  SIGNED
+  APPROVED_EXTERNAL
+  PDF_SEALED
+  DOWNLOADED
+  PAYMENT_STARTED
+  PAID
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  LINK_REVOKED
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Library
+// ═══════════════════════════════════════════════════════════════
+
+/// Reusable inputs you copy FROM into block JSON: standard deliverables and
+/// known third-party vendor costs. Relational because it is cross-proposal
+/// library data, not document content.
+model ServiceCatalogItem {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  kind        CatalogKind
+  name        String
+  category    String?
+  description String?     @db.Text
+
+  // Deliverable pricing
+  defaultPriceMinor Int?
+  currency          String? @default("USD")
+
+  // Vendor cost fields
+  vendorUrl        String?
+  planName         String?
+  monthlyCostMinor Int?
+  setupCostMinor   Int?
+  billedTo         BillingTarget?
+  freeLimit        String?
+  freeCaveat       String?       @db.Text
+  paidLimit        String?
+  paidPriceNote    String?
+  recommendation   String?       @db.Text
+
+  /// AI-researched rows land unverified and are badged in the editor. Publish
+  /// is blocked while any vendor row in a proposal is unverified: model pricing
+  /// knowledge drifts, and a wrong number in a cost table is a credibility hit
+  /// in front of a paying client.
+  aiGenerated Boolean   @default(false)
+  verifiedAt  DateTime?
+
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([organizationId, kind])
+  @@map("service_catalog_items")
+}
+
+enum CatalogKind {
+  DELIVERABLE
+  VENDOR_COST
+  SNIPPET
+}
+
+enum BillingTarget {
+  CLIENT
+  AGENCY
+  INCLUDED
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Lead magnet
+// ═══════════════════════════════════════════════════════════════
+
+model BlueprintRequest {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name    String
+  email   String
+  company String?
+  website String?
+  answers Json
+
+  status          BlueprintStatus @default(PENDING)
+  generatedDocPath String?
+  emailSentAt     DateTime?
+  error           String?
+
+  ip        String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status])
+  @@map("blueprint_requests")
+}
+
+enum BlueprintStatus {
+  PENDING
+  GENERATING
+  SENT
+  FAILED
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AI usage ledger
+// ═══════════════════════════════════════════════════════════════
+
+/// Doubles as the cost ledger. Without it the AI feature is financially opaque.
+model AiJob {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  provider String
+  model    String?
+  task     String
+  status   AiJobStatus @default(RUNNING)
+
+  proposalId String?
+
+  inputTokens       Int?
+  outputTokens      Int?
+  cacheReadTokens   Int?
+  cacheWriteTokens  Int?
+  costUsdMicros     Int?
+  durationMs        Int?
+
+  error String? @db.Text
+
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@index([organizationId, startedAt])
+  @@map("ai_jobs")
+}
+
+enum AiJobStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
