@@ -161,9 +161,9 @@ async function main() {
             },
             {
               id: "d3",
-              name: "Voice setup",
+              name: "Voice selection",
               description:
-                "Stock voice chosen with you on Starter, or your own voice cloned from a recording on Core and Full.",
+                "A stock voice from Vapi's library, chosen with you and tested on real calls before we go live.",
             },
           ],
         },
@@ -223,7 +223,6 @@ async function main() {
       ],
       clientResponsibilities: [
         "The lead list, with business name, phone, and owner name where you have it",
-        "3 to 5 minutes of clean audio if you want the cloned voice",
         "Google Calendar access for booking",
         "Access to your Twilio and Vapi accounts, or an invite to them",
         "Sign off on the script before we go live",
@@ -281,7 +280,6 @@ async function main() {
           ctaLabel: "Select Core",
           features: [
             { id: "c1", label: "Everything in Starter", included: true },
-            { id: "c2", label: "Voice cloned from your recording via ElevenLabs", included: true, detail: "It is your voice on the call" },
             { id: "c3", label: "Live calendar booking during the call", included: true, detail: "Agent reads real availability and confirms the slot before hanging up" },
             { id: "c4", label: "Full gatekeeper playbook", included: true, detail: "Multiple branches, callback time capture, decision maker name capture" },
             { id: "c5", label: "DNC and do-not-call suppression list", included: true, detail: "A “remove me” is never dialled again" },
@@ -317,7 +315,10 @@ async function main() {
   });
 
   // ── Third party running costs ──────────────────────────────────
-  const verified = new Date().toISOString();
+  // A fixed date, not `new Date()`. verifiedAt means "when a human last checked
+  // this vendor's pricing", not "when the seed script ran" — and using now()
+  // made the content hash change on every run for content that was identical.
+  const verified = "2026-09-08T00:00:00.000Z";
   blocks.push({
     type: "SERVICE_COSTS",
     data: {
@@ -327,7 +328,7 @@ async function main() {
         "You pay these directly to the vendors, not to me. Nothing here is marked up. Figures assume roughly 500 dials a month averaging about 90 seconds, which is around 750 minutes.",
       showTotals: true,
       footnote:
-        "First month: the build price plus under $120 in tools. After that it is usage only. Confirmations go out by email rather than SMS, which keeps you off SMS entirely and out of any A2P registration process.",
+        "Realistic monthly spend at 500 dials averaging around 90 seconds is roughly $65 to $95, all of it Vapi and Twilio minutes. Everything else stays on free tiers. First month is the build price plus that. After that it is usage only. Confirmations go out by email rather than SMS, which keeps you off SMS entirely and out of any A2P registration process.",
       rows: [
         {
           id: "v1",
@@ -352,19 +353,6 @@ async function main() {
           setupCostMinor: 0,
           billedTo: "CLIENT",
           notes: "About $0.014 per minute US outbound. No new number, so no new line rental.",
-          aiGenerated: false,
-          verifiedAt: verified,
-        },
-        {
-          id: "v3",
-          vendor: "ElevenLabs",
-          purpose: "Voice cloning",
-          planName: "Creator",
-          vendorUrl: "https://elevenlabs.io/pricing",
-          monthlyCostMinor: 22_00,
-          setupCostMinor: 0,
-          billedTo: "CLIENT",
-          notes: "Core and Full only. Not needed on Starter, which uses a stock voice.",
           aiGenerated: false,
           verifiedAt: verified,
         },
@@ -456,18 +444,6 @@ async function main() {
           verifiedAt: verified,
         },
         {
-          id: "t3",
-          vendor: "Voice model (ElevenLabs)",
-          vendorUrl: "https://elevenlabs.io/pricing",
-          freeLimit: "Vapi stock voices, no extra cost",
-          freeCaveat: "Stock voices are good but generic. It will not be your voice.",
-          paidLimit: "Voice cloning from your own recording",
-          paidPriceNote: "Creator, $22 per month",
-          recommendation: "Core and Full only. One of the two things that moves the needle most.",
-          aiGenerated: false,
-          verifiedAt: verified,
-        },
-        {
           id: "t4",
           vendor: "Automation layer (n8n / Make)",
           vendorUrl: "https://n8n.io/pricing",
@@ -532,10 +508,10 @@ async function main() {
         {
           id: "m1",
           name: "Kickoff and script",
-          description: "Kickoff call, script written, questions locked, voice sample recorded.",
+          description: "Kickoff call, script written, qualifying questions locked, voice chosen.",
           startOffsetDays: 0,
           durationDays: 2,
-          deliverables: ["Call script", "Three qualifying questions", "Voice sample"],
+          deliverables: ["Call script", "Three qualifying questions", "Voice selected"],
           isPaymentMilestone: false,
         },
         {
@@ -623,7 +599,10 @@ async function main() {
       title: "Core at $500",
       body: doc(
         p(
-          "The cloned voice and live on-call booking are the two things that move the needle most, and the DNC list saves you a headache later. Full is worth it only if you plan to run this at real volume, in which case the A/B testing pays for itself quickly.",
+          "Live on-call booking is the single thing that moves the needle most. A link sent afterwards loses people between the call ending and the email landing; booking the slot while you have them on the phone does not.",
+        ),
+        p(
+          "The full gatekeeper playbook is what gets you past the front desk at all, and the DNC suppression list saves you a headache later. Full is worth it only if you plan to run this at real volume, in which case the A/B testing pays for itself quickly.",
         ),
       ),
     },
@@ -769,43 +748,59 @@ async function main() {
     orderBy: { versionNumber: "desc" },
   });
 
-  const version = await prisma.proposalVersion.create({
-    data: {
-      proposalId: proposal.id,
-      versionNumber: (lastVersion?.versionNumber ?? 0) + 1,
-      snapshot: snapshot as object,
-      contentHash: computeContentHash(snapshot),
-    },
-  });
+  const contentHash = computeContentHash(snapshot);
 
-  await prisma.proposal.update({
-    where: { id: proposal.id },
-    data: { publishedVersionId: version.id, publishedAt: new Date() },
-  });
+  // Version history should record real publish events, not every time a script
+  // ran. If the content is byte-identical to the current version, reuse it.
+  let version = lastVersion;
+  let minted = false;
 
-  const at = new Date();
-  const prev = await prisma.proposalEvent.findFirst({
-    where: { proposalId: proposal.id },
-    orderBy: { at: "desc" },
-  });
-  await prisma.proposalEvent.create({
-    data: {
-      proposalId: proposal.id,
-      type: "PUBLISHED",
-      at,
-      prevEventHash: prev?.eventHash ?? null,
-      eventHash: computeEventHash(prev?.eventHash ?? null, {
+  if (!lastVersion || lastVersion.contentHash !== contentHash) {
+    version = await prisma.proposalVersion.create({
+      data: {
+        proposalId: proposal.id,
+        versionNumber: (lastVersion?.versionNumber ?? 0) + 1,
+        snapshot: snapshot as object,
+        contentHash,
+      },
+    });
+    minted = true;
+
+    await prisma.proposal.update({
+      where: { id: proposal.id },
+      data: { publishedVersionId: version.id, publishedAt: new Date() },
+    });
+
+    const at = new Date();
+    const prev = await prisma.proposalEvent.findFirst({
+      where: { proposalId: proposal.id },
+      orderBy: { at: "desc" },
+    });
+    await prisma.proposalEvent.create({
+      data: {
+        proposalId: proposal.id,
         type: "PUBLISHED",
-        at: at.toISOString(),
-      }),
-    },
-  });
+        at,
+        prevEventHash: prev?.eventHash ?? null,
+        eventHash: computeEventHash(prev?.eventHash ?? null, {
+          type: "PUBLISHED",
+          at: at.toISOString(),
+        }),
+      },
+    });
+  } else if (proposal.publishedVersionId !== lastVersion.id) {
+    // Content unchanged but the previous run died before publishing it.
+    await prisma.proposal.update({
+      where: { id: proposal.id },
+      data: { publishedVersionId: lastVersion.id, publishedAt: new Date() },
+    });
+  }
 
   console.log(`\nProposal: ${TITLE}`);
   console.log(`  id           ${proposal.id}`);
   console.log(`  blocks       ${blocks.length}`);
-  console.log(`  version      v${version.versionNumber}`);
-  console.log(`  contentHash  ${version.contentHash}`);
+  console.log(`  version      v${version!.versionNumber}${minted ? " (new)" : " (unchanged, reused)"}`);
+  console.log(`  contentHash  ${version!.contentHash}`);
   if (share) {
     console.log(`\n  Share link:  /p/${share.token}`);
     console.log(`  (shown once — only its SHA-256 is stored)`);
