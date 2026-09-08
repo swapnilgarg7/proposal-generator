@@ -9,12 +9,16 @@ import { SignOutButton } from "@/components/SignOutButton";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
 
+  // `built: false` renders the label without a link. These routes are in the
+  // plan but do not exist yet, and a nav item that 404s is worse than one that
+  // says "not yet": the first looks like the app is broken, the second like it
+  // is unfinished. Flip the flag when the route lands.
   const nav = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/proposals", label: "Proposals" },
-    { href: "/clients", label: "Clients" },
-    { href: "/library", label: "Library" },
-    { href: "/settings", label: "Settings" },
+    { href: "/dashboard", label: "Dashboard", built: true },
+    { href: "/proposals", label: "Proposals", built: true },
+    { href: "/clients", label: "Clients", built: false },
+    { href: "/library", label: "Library", built: false },
+    { href: "/settings", label: "Settings", built: false },
   ];
 
   return (
@@ -26,15 +30,26 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </Link>
 
           <nav className="flex flex-1 items-center gap-1 overflow-x-auto">
-            {nav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm text-white/55 transition-colors hover:bg-white/[0.06] hover:text-foreground"
-              >
-                {item.label}
-              </Link>
-            ))}
+            {nav.map((item) =>
+              item.built ? (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm text-white/55 transition-colors hover:bg-white/[0.06] hover:text-foreground"
+                >
+                  {item.label}
+                </Link>
+              ) : (
+                <span
+                  key={item.href}
+                  title="Not built yet"
+                  aria-disabled="true"
+                  className="cursor-default whitespace-nowrap rounded-lg px-3 py-1.5 text-sm text-white/25"
+                >
+                  {item.label}
+                </span>
+              ),
+            )}
           </nav>
 
           <div className="flex shrink-0 items-center gap-3">

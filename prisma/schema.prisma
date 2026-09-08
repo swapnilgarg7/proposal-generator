@@ -536,6 +536,7 @@ enum ProposalEventType {
   ACCEPTED
   DECLINED
   EXPIRED
+  LINK_ISSUED
   LINK_REVOKED
 }
 

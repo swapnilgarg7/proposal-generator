@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { OrgScope } from "@/lib/auth";
+import { generateShareToken } from "@/lib/versioning/snapshot";
 
 /**
  * Org-scoped proposal queries.
@@ -111,5 +112,64 @@ export async function getRecentActivity(scope: OrgScope, limit = 12) {
     orderBy: { at: "desc" },
     take: limit,
     include: { proposal: { select: { id: true, title: true, client: { select: { company: true } } } } },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Share links
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Mints a share token for a proposal and returns it ONCE.
+ *
+ * Only the SHA-256 is persisted, so this return value is the only time the
+ * token exists in readable form. Callers must surface it immediately; there is
+ * no way to recover it afterwards, by design — a database read must not be able
+ * to hand over every live proposal link.
+ *
+ * Issuing over an existing link replaces it, which takes the old URL dead the
+ * moment this commits. `revokedAt` is cleared so that re-issuing is also the
+ * way to un-revoke.
+ */
+export async function issueShareLink(
+  scope: OrgScope,
+  id: string,
+): Promise<{ token: string; replaced: boolean } | null> {
+  const proposal = await prisma.proposal.findFirst({
+    where: { id, organizationId: scope.organizationId },
+    select: { id: true, publicTokenHash: true },
+  });
+  if (!proposal) return null;
+
+  const { token, tokenHash } = generateShareToken();
+
+  await prisma.proposal.update({
+    where: { id: proposal.id },
+    data: { publicTokenHash: tokenHash, revokedAt: null },
+  });
+
+  return { token, replaced: Boolean(proposal.publicTokenHash) };
+}
+
+/**
+ * Takes the current link dead without minting a replacement.
+ *
+ * The hash is deliberately left in place: clearing it would make the record of
+ * which token was revoked disappear along with it.
+ */
+export async function revokeShareLink(scope: OrgScope, id: string): Promise<boolean> {
+  const { count } = await prisma.proposal.updateMany({
+    where: { id, organizationId: scope.organizationId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+  return count > 0;
+}
+
+/** Audit trail for one proposal, newest first. */
+export async function getProposalEvents(scope: OrgScope, id: string, limit = 50) {
+  return prisma.proposalEvent.findMany({
+    where: { proposalId: id, proposal: { organizationId: scope.organizationId } },
+    orderBy: { at: "desc" },
+    take: limit,
   });
 }
