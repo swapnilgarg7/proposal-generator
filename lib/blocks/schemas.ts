@@ -255,6 +255,61 @@ export const tierLimitsBlockSchema = z.object({
 });
 
 // ─────────────────────────────────────────────────────────────────
+// COMPARISON_TABLE — a generic n-column matrix
+// ─────────────────────────────────────────────────────────────────
+
+export const comparisonColumnSchema = z.object({
+  id: z.string(),
+  label: nonEmpty(80),
+  /** A qualifier under the heading, e.g. "recommended" or "3 posts/day". */
+  note: z.string().trim().max(120).optional(),
+  /** Tints the column. Use it for the option you are steering towards. */
+  emphasis: z.boolean().default(false),
+});
+
+export const comparisonRowSchema = z.object({
+  id: z.string(),
+  label: nonEmpty(200),
+  /**
+   * One cell per column, in column order. The block-level refine enforces the
+   * count: a short row would silently shift every cell after it left by one,
+   * which in a priced table means the client reads the wrong number against
+   * the wrong option.
+   */
+  cells: z.array(z.string().trim().max(300)).min(1).max(8),
+  /** Renders heavier. Meant for the bottom-line row, usually price. */
+  emphasis: z.boolean().default(false),
+});
+
+export const comparisonTableBlockSchema = z
+  .object({
+    eyebrow: z.string().trim().max(120).default("Comparison"),
+    title: nonEmpty(200).default("How the options compare"),
+    intro: z.string().trim().max(1500).optional(),
+    /** Heading for the leftmost (row-label) column. Often best left blank. */
+    rowHeaderLabel: z.string().trim().max(80).optional(),
+    columns: z.array(comparisonColumnSchema).min(2).max(8),
+    rows: z.array(comparisonRowSchema).min(1).max(30),
+    footnote: z.string().trim().max(800).optional(),
+
+    /** Same provenance contract as the vendor cost tables: these carry numbers. */
+    aiGenerated: z.boolean().default(false),
+    verifiedAt: z.string().datetime().nullable().default(null),
+  })
+  .refine((b) => b.rows.every((r) => r.cells.length === b.columns.length), {
+    message: "Every row must have exactly one cell per column.",
+    path: ["rows"],
+  })
+  .refine((b) => new Set(b.columns.map((c) => c.id)).size === b.columns.length, {
+    message: "Column ids must be unique within a block.",
+    path: ["columns"],
+  })
+  .refine((b) => b.columns.filter((c) => c.emphasis).length <= 1, {
+    message: "At most one column can be emphasised.",
+    path: ["columns"],
+  });
+
+// ─────────────────────────────────────────────────────────────────
 // TIMELINE
 // ─────────────────────────────────────────────────────────────────
 
@@ -378,6 +433,7 @@ export const BLOCK_TYPES = [
   "ADD_ONS",
   "SERVICE_COSTS",
   "TIER_LIMITS",
+  "COMPARISON_TABLE",
   "TIMELINE",
   "TERMS",
   "BLUEPRINT_OFFER",
@@ -396,6 +452,7 @@ export const blockSchemas = {
   ADD_ONS: addOnsBlockSchema,
   SERVICE_COSTS: serviceCostsBlockSchema,
   TIER_LIMITS: tierLimitsBlockSchema,
+  COMPARISON_TABLE: comparisonTableBlockSchema,
   TIMELINE: timelineBlockSchema,
   TERMS: termsBlockSchema,
   BLUEPRINT_OFFER: blueprintOfferBlockSchema,
@@ -413,6 +470,7 @@ export const proposalBlockSchema = z.discriminatedUnion("type", [
   z.object({ id: z.string(), order: z.number().int(), visible: z.boolean().default(true), schemaVersion: z.number().int().default(1), type: z.literal("ADD_ONS"), data: addOnsBlockSchema }),
   z.object({ id: z.string(), order: z.number().int(), visible: z.boolean().default(true), schemaVersion: z.number().int().default(1), type: z.literal("SERVICE_COSTS"), data: serviceCostsBlockSchema }),
   z.object({ id: z.string(), order: z.number().int(), visible: z.boolean().default(true), schemaVersion: z.number().int().default(1), type: z.literal("TIER_LIMITS"), data: tierLimitsBlockSchema }),
+  z.object({ id: z.string(), order: z.number().int(), visible: z.boolean().default(true), schemaVersion: z.number().int().default(1), type: z.literal("COMPARISON_TABLE"), data: comparisonTableBlockSchema }),
   z.object({ id: z.string(), order: z.number().int(), visible: z.boolean().default(true), schemaVersion: z.number().int().default(1), type: z.literal("TIMELINE"), data: timelineBlockSchema }),
   z.object({ id: z.string(), order: z.number().int(), visible: z.boolean().default(true), schemaVersion: z.number().int().default(1), type: z.literal("TERMS"), data: termsBlockSchema }),
   z.object({ id: z.string(), order: z.number().int(), visible: z.boolean().default(true), schemaVersion: z.number().int().default(1), type: z.literal("BLUEPRINT_OFFER"), data: blueprintOfferBlockSchema }),
@@ -428,6 +486,9 @@ export type PricingTiersBlock = z.infer<typeof pricingTiersBlockSchema>;
 export type AddOnsBlock = z.infer<typeof addOnsBlockSchema>;
 export type ServiceCostsBlock = z.infer<typeof serviceCostsBlockSchema>;
 export type TierLimitsBlock = z.infer<typeof tierLimitsBlockSchema>;
+export type ComparisonTableBlock = z.infer<typeof comparisonTableBlockSchema>;
+export type ComparisonColumn = z.infer<typeof comparisonColumnSchema>;
+export type ComparisonRow = z.infer<typeof comparisonRowSchema>;
 export type TimelineBlock = z.infer<typeof timelineBlockSchema>;
 export type PricingTier = z.infer<typeof pricingTierSchema>;
 export type AddOn = z.infer<typeof addOnSchema>;

@@ -112,7 +112,16 @@ export function SignatureBlock({
           </div>
         ) : null}
 
-        <p className="mt-7 border-t border-[var(--doc-border)] pt-5 text-[0.8125rem] leading-[1.7] text-[var(--doc-fg-subtle)]">
+        {/* The consent text is shown beside the checkbox the signer actually
+            ticks. Repeating it here would be redundant on screen — but the PDF
+            has no interactive control, so the printed document still needs it. */}
+        <p
+          className={
+            action
+              ? "mt-7 hidden border-t border-[var(--doc-border)] pt-5 text-[0.8125rem] leading-[1.7] text-[var(--doc-fg-subtle)] print:block"
+              : "mt-7 border-t border-[var(--doc-border)] pt-5 text-[0.8125rem] leading-[1.7] text-[var(--doc-fg-subtle)]"
+          }
+        >
           {data.consentText}
         </p>
       </div>

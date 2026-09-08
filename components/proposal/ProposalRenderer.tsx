@@ -14,6 +14,7 @@ import { ProblemStatement } from "@/components/proposal/blocks/ProblemStatement"
 import { ScopeOfWork } from "@/components/proposal/blocks/ScopeOfWork";
 import { ServiceCosts } from "@/components/proposal/blocks/ServiceCosts";
 import { TierLimits } from "@/components/proposal/blocks/TierLimits";
+import { ComparisonTable } from "@/components/proposal/blocks/ComparisonTable";
 import { Timeline } from "@/components/proposal/blocks/Timeline";
 import { PricingTiers } from "@/components/proposal/blocks/PricingTiers";
 import { AddOns } from "@/components/proposal/blocks/AddOns";
@@ -127,6 +128,8 @@ function renderBlock(
       return <ServiceCosts data={block.data} ctx={ctx} />;
     case "TIER_LIMITS":
       return <TierLimits data={block.data} />;
+    case "COMPARISON_TABLE":
+      return <ComparisonTable data={block.data} />;
     case "TIMELINE":
       return <Timeline data={block.data} ctx={ctx} />;
     case "TERMS":

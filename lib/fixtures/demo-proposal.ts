@@ -605,8 +605,70 @@ export const demoProposal: ProposalSnapshot = {
     },
 
     {
-      id: "blueprint",
+      id: "hosting-comparison",
       order: 9,
+      visible: true,
+      schemaVersion: 1,
+      type: "COMPARISON_TABLE",
+      data: {
+        eyebrow: "Deployment",
+        title: "Where this should run",
+        intro:
+          "Three viable hosting shapes for a clinic system holding patient data. The differences that matter are the ones that only show up under audit.",
+        rowHeaderLabel: "What you get",
+        columns: [
+          { id: "shared", label: "Shared tier", emphasis: false },
+          { id: "dedicated", label: "Dedicated", note: "What we would pick", emphasis: true },
+          { id: "onprem", label: "On premise", emphasis: false },
+        ],
+        rows: [
+          {
+            id: "cr1",
+            emphasis: false,
+            label: "Data residency",
+            cells: ["Region only", "Region and zone pinned", "Your building"],
+          },
+          {
+            id: "cr2",
+            emphasis: false,
+            label: "Signed BAA available",
+            cells: ["No", "Yes", "Not applicable"],
+          },
+          {
+            id: "cr3",
+            emphasis: false,
+            label: "Daily backups",
+            cells: ["No", "Yes", "Yes, if you run them"],
+          },
+          {
+            id: "cr4",
+            emphasis: false,
+            label: "Recovery point objective",
+            cells: ["24 hours", "1 hour", "Whatever you configure"],
+          },
+          {
+            id: "cr5",
+            emphasis: false,
+            label: "Who patches the host",
+            cells: ["Vendor", "Vendor", "You"],
+          },
+          {
+            id: "cr6",
+            label: "Monthly cost",
+            cells: ["$25", "$120", "$0 plus staff time"],
+            emphasis: true,
+          },
+        ],
+        footnote:
+          "On premise reads as cheapest right up until you cost the staff time to patch it. The dedicated tier is the one that survives an audit without an argument.",
+        aiGenerated: false,
+        verifiedAt: "2026-09-07T00:00:00.000Z",
+      },
+    },
+
+    {
+      id: "blueprint",
+      order: 10,
       visible: true,
       schemaVersion: 1,
       type: "BLUEPRINT_OFFER",
@@ -628,7 +690,7 @@ export const demoProposal: ProposalSnapshot = {
 
     {
       id: "payment",
-      order: 10,
+      order: 11,
       visible: true,
       schemaVersion: 1,
       type: "PAYMENT",
@@ -643,7 +705,7 @@ export const demoProposal: ProposalSnapshot = {
 
     {
       id: "terms",
-      order: 11,
+      order: 12,
       visible: true,
       schemaVersion: 1,
       type: "TERMS",
@@ -664,7 +726,7 @@ export const demoProposal: ProposalSnapshot = {
 
     {
       id: "signature",
-      order: 12,
+      order: 13,
       visible: true,
       schemaVersion: 1,
       type: "SIGNATURE",
