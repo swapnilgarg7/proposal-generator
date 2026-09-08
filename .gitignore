@@ -48,3 +48,6 @@ next-env.d.ts
 .env.local
 .env*.local
 !.env.example
+
+# Local credential handoff, never commit
+PASSWORD.txt
