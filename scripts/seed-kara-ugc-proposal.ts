@@ -247,7 +247,7 @@ async function main() {
         { id: "c7", label: "Feels like real UGC", cells: ["Least", "Middle", "Most"] },
       ],
       footnote:
-        "The right hand column is the one that catches people out. At 3 posts a day, generating fresh is roughly $1,000 a month for a single account. That is not a solo operator number, and it is why the next section matters more than anything else in this document.",
+        "These are three alternatives, not three levels of the same thing. You pick one and pay for that route's tooling only: faceless needs no character tool at all, the avatar route is a HeyGen subscription, and the fully AI generated route is Higgsfield or Veo charged per generation. HeyGen and Higgsfield are never both on your bill. The right hand column is the one that catches people out: at 3 posts a day, generating fresh is roughly $1,000 a month for a single account. That is not a solo operator number, and it is why the next section matters.",
     },
   });
 
@@ -258,6 +258,9 @@ async function main() {
       eyebrow: "The part that decides viability",
       title: "The cost lever nobody talks about: asset reuse",
       body: doc(
+        p(
+          "This section is only about the fully AI generated route. On faceless there is nothing to generate, and on the AI avatar route HeyGen already gives you the same face every time for a flat monthly fee. Skip ahead if you are taking either of those.",
+        ),
         p(
           "You do not have to generate a new person every video. That is the mistake that makes this cost roughly $12 a post.",
         ),
@@ -562,7 +565,7 @@ async function main() {
               label: "Running cost",
               included: true,
               detail:
-                "$35 to $130 a month depending on route. A clip library, if you want one, is a separate $300 to $450 paid to Higgsfield directly, not to me",
+                "$35 to $130 a month depending on route: about $35 faceless, about $70 on the avatar route with a HeyGen subscription, about $95 to $130 on the fully AI generated route. That last route also needs a clip library built once, a separate $300 to $450 paid to Higgsfield or Veo directly, not to me",
             },
             { id: "co11", label: "Multiple accounts", included: false, detail: "One account" },
             { id: "co12", label: "Variation engine", included: false },
@@ -690,7 +693,7 @@ async function main() {
         "You pay these directly to the vendors, not to me. Nothing here is marked up. The figures below are the Core setup on one account on the AI avatar route, at 90 videos a month, which is the configuration I would actually run. Where a free path is good enough I have taken it.",
       showTotals: true,
       footnote:
-        "That comes to roughly $63 a month at these plan levels. Call it $65 to $80 once real usage moves around: script volume, extra voices, and the occasional re-render. Pilot on the faceless path is about $30 all in. The AI generated route is a different order of magnitude and the scenario table below has it.",
+        "That comes to roughly $63 a month at these plan levels. Call it $65 to $80 once real usage moves around: script volume, extra voices, and the occasional re-render. Only the HeyGen line changes if you switch route: drop it and you are on faceless at about $35, or replace it with Higgsfield or Veo and you are on the fully AI generated route. Higgsfield does not appear in this table because it belongs to a route this configuration is not taking. Pilot on the faceless path is about $30 all in.",
       rows: [
         {
           id: "sc1",
