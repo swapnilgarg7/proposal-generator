@@ -141,7 +141,7 @@ async function main() {
       title: "What multi account actually looks like",
       body: doc(
         p(
-          "Short version: going from 1 account to 5 is not 5x the work, but it is not free either. The build cost barely moves. The running cost and the risk both move a lot.",
+          "Short version: going from 1 account to 5 is not 5x the work, but it is not free either. The build cost barely moves. The running cost and the risk both move a lot, and how much they move depends almost entirely on which content route you pick.",
         ),
         p(
           "The thing that breaks people is posting the same video to 10 accounts. TikTok fingerprints video and audio. Duplicate uploads get suppressed quietly, you never get a warning, the views just never come. So a real multi account setup needs a variation layer: different hook, different first three seconds, different voice, different caption, different music, different character per account. That is the part that costs money.",
@@ -155,6 +155,7 @@ async function main() {
     data: {
       eyebrow: "Scaling",
       title: "What each account count costs you",
+      intro: "Cost per month, at 3 posts per day per account.",
       columns: [
         { id: "a1", label: "1 account" },
         { id: "a3", label: "3 accounts" },
@@ -162,38 +163,20 @@ async function main() {
         { id: "a10", label: "10 accounts" },
       ],
       rows: [
-        {
-          id: "r1",
-          label: "Videos needed per month at 3 per day",
-          cells: ["90", "270", "450", "900"],
-        },
-        { id: "r2", label: "Unique videos needed", cells: ["90", "270", "450", "900"] },
-        { id: "r3", label: "Characters needed", cells: ["1", "3", "5", "10"] },
+        { id: "r1", label: "Unique videos per month", cells: ["90", "270", "450", "900"] },
+        { id: "r2", label: "Faceless", cells: ["~$35", "~$70", "~$110", "~$200"] },
+        { id: "r3", label: "AI avatar", cells: ["~$70", "~$180", "~$290", "~$560"] },
         {
           id: "r4",
-          label: "Posting method",
-          cells: ["Official TikTok API", "Official API", "Official API", "API plus scheduler"],
+          label: "Fully AI generated",
+          cells: ["~$1,000", "~$3,000", "~$5,000", "~$10,000"],
         },
-        { id: "r5", label: "Suppression risk", cells: ["Low", "Low", "Medium", "High"] },
-        {
-          id: "r6",
-          label: "Monthly tool cost, faceless",
-          cells: ["~$15", "~$30", "~$45", "~$85"],
-        },
-        {
-          id: "r7",
-          label: "Monthly tool cost, AI avatar",
-          cells: ["~$50", "~$110", "~$175", "~$330"],
-        },
-        {
-          id: "r8",
-          label: "Monthly tool cost, full AI generated",
-          cells: ["~$180", "~$520", "~$860", "~$1,700"],
-        },
-        { id: "r9", label: "My build add on", cells: ["Included", "+$50", "+$100", "+$200"] },
+        { id: "r5", label: "Characters needed", cells: ["1", "3", "5", "10"] },
+        { id: "r6", label: "Suppression risk", cells: ["Low", "Low", "Medium", "High"] },
+        { id: "r7", label: "My build add on", cells: ["Included", "+$50", "+$100", "+$200"] },
       ],
       footnote:
-        "Honest read: 10 accounts at 3 per day is 900 unique videos a month. Even at the cheap end that is a real spend and a real ban surface. I would start at 1, prove the format converts, then go to 3. Five is a reasonable ceiling for a solo operator. Ten is a business in itself. The other thing nobody mentions: 10 TikTok accounts need 10 phone numbers, 10 emails, and ideally warmed accounts that were not all created the same afternoon from the same IP. That part is manual and it is on you, not on the build.",
+        "Fully AI generated at any multi account volume is not a thing you do on savings. It is a thing you do once an account already earns. The other point nobody mentions: 10 TikTok accounts need 10 phone numbers, 10 emails, and ideally warmed accounts that were not all created the same afternoon from the same IP. That part is manual and it is on you, not on the build.",
     },
   });
 
@@ -204,10 +187,10 @@ async function main() {
       eyebrow: "Answering your three questions",
       title: "Character consistency, three ways to do it",
       intro:
-        "You said one character per account, or faceless. Both work. They cost very different amounts.",
+        "You said one character per account, or faceless. Both work, and so does a third route. They cost very different amounts, and the gap is far wider than the per second API list prices suggest.",
       columns: [
         { id: "faceless", label: "Faceless" },
-        { id: "avatar", label: "AI avatar", note: "The sweet spot here", emphasis: true },
+        { id: "avatar", label: "AI avatar", note: "Best value at volume", emphasis: true },
         { id: "fullai", label: "Fully AI generated" },
       ],
       rows: [
@@ -217,45 +200,109 @@ async function main() {
           cells: [
             "Hands, app screen, b roll, voiceover. No face",
             "Consistent AI presenter, talking head, app screen beside them",
-            "AI generated person in real settings, reacting. Looks like a real UGC creator",
+            "AI generated person in a real setting, reacting. Looks like actual UGC",
           ],
         },
         {
           id: "c2",
           label: "Tools",
           cells: [
-            "ElevenLabs, screen recordings, stock b roll",
-            "HeyGen or similar avatar tool",
-            "Veo or Higgsfield, character locked with a reference image",
+            "ElevenLabs, screen recordings, ffmpeg",
+            "HeyGen or similar, subscription based",
+            "Higgsfield or Veo, per generation",
           ],
         },
         {
           id: "c3",
-          label: "Consistency across videos",
+          label: "Cost model",
           cells: [
-            "Perfect, there is no face to drift",
-            "Perfect, same avatar every time",
-            "Good but not perfect. Small drift between clips",
+            "Near zero marginal",
+            "Flat monthly, cheap per video inside quota",
+            "Pay per generation, expensive",
           ],
         },
         {
           id: "c4",
-          label: "Cost per video",
-          cells: ["$0.05 to $0.15", "$0.50 to $1.20", "$1.50 to $3.00"],
+          label: "Realistic cost per finished video",
+          cells: ["$0.15 to $0.30", "$0.40 to $1.00", "$8 to $14"],
         },
-        { id: "c5", label: "Feels like real UGC", cells: ["Least", "Middle", "Most"] },
+        {
+          id: "c5",
+          label: "Why so expensive",
+          cells: [
+            "n/a",
+            "n/a",
+            "A 25 second video is 3 to 4 clips, and you throw away 2 to 3 generations per usable clip",
+          ],
+        },
         {
           id: "c6",
-          label: "Best for",
+          label: "Consistency",
           cells: [
-            "Testing cheaply, high volume",
-            "The default choice",
-            "When you want it to actually pass as a person",
+            "Perfect, no face to drift",
+            "Perfect",
+            "Good with a locked reference image, but drift happens and drift means regenerating",
           ],
+        },
+        { id: "c7", label: "Feels like real UGC", cells: ["Least", "Middle", "Most"] },
+      ],
+      footnote:
+        "The right hand column is the one that catches people out. At 3 posts a day, generating fresh is roughly $1,000 a month for a single account. That is not a solo operator number, and it is why the next section matters more than anything else in this document.",
+    },
+  });
+
+  // ── The cost lever: asset reuse ────────────────────────────────
+  blocks.push({
+    type: "RICH_TEXT",
+    data: {
+      eyebrow: "The part that decides viability",
+      title: "The cost lever nobody talks about: asset reuse",
+      body: doc(
+        p(
+          "You do not have to generate a new person every video. That is the mistake that makes this cost roughly $12 a post.",
+        ),
+        p(
+          "Generate a character clip library once. 30 to 40 short clips of your character reacting, nodding, laughing, pointing, looking surprised, with mouth movements for different beats. That is a one time spend of roughly $300 to $450 at Higgsfield or Veo quality. Then the pipeline recombines those clips against different app demos, different voiceovers, and different hooks.",
+        ),
+      ),
+    },
+  });
+
+  blocks.push({
+    type: "COMPARISON_TABLE",
+    data: {
+      eyebrow: "Asset reuse",
+      title: "Fresh every video versus a clip library",
+      columns: [
+        { id: "fresh", label: "Generate every video fresh" },
+        { id: "library", label: "Clip library, reused", emphasis: true },
+      ],
+      rows: [
+        { id: "l1", label: "Upfront", cells: ["$0", "$300 to $450, one time"] },
+        { id: "l2", label: "Per video after", cells: ["$8 to $14", "$0.60 to $1.20"] },
+        {
+          id: "l3",
+          label: "Cost of 90 videos",
+          cells: ["~$1,000", "~$400 first month, ~$90 after"],
+        },
+        {
+          id: "l4",
+          label: "Cost of 450 videos",
+          cells: ["~$5,000", "~$450 first month, ~$400 after"],
+        },
+        {
+          id: "l5",
+          label: "Visual variety",
+          cells: ["High", "Moderate, and it repeats if you look closely"],
+        },
+        {
+          id: "l6",
+          label: "Refresh needed",
+          cells: ["Never", "New clips every 6 to 8 weeks, ~$150"],
         },
       ],
       footnote:
-        "For a reaction to an app demo, the AI avatar route is the sweet spot. You get a consistent face, the app fills most of the frame anyway, and the cost stays sane at volume. Faceless is what I would run for the first two weeks to find which hooks work, before spending anything on avatars. If you want per account characters, each one is a different avatar, different voice, different name and bio. That is the variation layer doing its job.",
+        "This is the difference between the format being viable and not. It is also the main thing I would be building for you in Scale.",
     },
   });
 
@@ -318,12 +365,20 @@ async function main() {
               id: "d3",
               name: "Character and voice",
               description:
-                "One consistent character per account: locked look, locked voice, own name and bio. Faceless on Pilot, AI avatar from Core up.",
+                "One consistent character per account: locked look, locked voice, own name and bio. Faceless on Pilot; on Core you pick the route.",
               acceptanceCriteria:
                 "You sign off on the character and the first 5 videos before anything auto posts.",
             },
             {
               id: "d4",
+              name: "Clip library system",
+              description:
+                "On the AI generated route, a library of 30 to 40 character clips generated once and recombined across hundreds of videos, instead of paying per generation every post. Built on Scale, supported on Core.",
+              acceptanceCriteria:
+                "Per video cost after the library is built lands under $1.50, not $8 to $14.",
+            },
+            {
+              id: "d5",
               name: "Screen recording library",
               description:
                 "Your 10 to 15 app demo clips catalogued so the pipeline rotates them across hundreds of videos instead of reusing the same one.",
@@ -336,20 +391,20 @@ async function main() {
           summary: "The part that runs without you.",
           deliverables: [
             {
-              id: "d5",
+              id: "d6",
               name: "Video assembly",
               description:
-                "Avatar plus app demo, split screen or picture in picture, captions burned in, music under.",
+                "Character plus app demo, split screen or picture in picture, captions burned in, music under.",
             },
             {
-              id: "d6",
+              id: "d7",
               name: "Scheduled posting",
               description:
                 "Direct to TikTok via the official Content Posting API, 3 per day at times you set.",
               acceptanceCriteria: "A test post lands on the account at the scheduled time.",
             },
             {
-              id: "d7",
+              id: "d8",
               name: "Content queue",
               description:
                 "A sheet showing what is about to go out, so you can kill anything you do not like before it posts.",
@@ -362,13 +417,13 @@ async function main() {
           summary: "So you can see what is working and run it yourself.",
           deliverables: [
             {
-              id: "d8",
+              id: "d9",
               name: "Performance log",
               description:
                 "Views, likes and saves pulled back in, so you can see which hook won rather than guessing.",
             },
             {
-              id: "d9",
+              id: "d10",
               name: "Handover",
               description:
                 "Walkthrough video and docs, everything in accounts in your name. 7 days of fixes on Pilot, 14 on Core, 30 on Scale.",
@@ -379,6 +434,7 @@ async function main() {
       outOfScope: [
         "Creating or warming the TikTok accounts themselves",
         "Phone numbers, emails, or proxies for multi account",
+        "The Higgsfield or Veo spend for a clip library, which you pay to them directly",
         "App store listing, landing page, or link in bio setup",
         "Paid ads or Spark Ads",
         "Ongoing management after handover. If you want me running it monthly, I can quote that separately",
@@ -388,6 +444,7 @@ async function main() {
         "App name, what it does, who it is for, and the one thing about it people react to",
         "TikTok account or accounts, already created and ideally a few weeks old",
         "Confirmation of the niche. On our call you mentioned manifestations and affirmations. If the app is in that space, say so, because it changes the trend research completely",
+        "A decision on the content route, which sets your running cost",
         "Sign off on the character and the first 5 videos before anything auto posts",
       ],
       assumptions: [
@@ -405,172 +462,154 @@ async function main() {
       eyebrow: "Packages",
       title: "Three ways to run this",
       intro:
-        "Prices exclude the third party running costs below, which you pay directly to those vendors. Nothing there is marked up by me.",
+        "The tiers sort by content route as much as by features. Prices exclude the third party running costs below, which you pay directly to those vendors. Nothing there is marked up by me.",
       selectable: true,
       footnote:
-        "Priced below my usual rate because I want the contract on my Upwork record. That is the trade and I am fine with it.",
+        "Add ons: accounts 6 to 10 at $40 each. Clip library refresh automation at $75. Priced below my usual rate because I want the contract on my Upwork record. That is the trade and I am fine with it.",
       tiers: [
         {
           key: "pilot",
           name: "Pilot",
-          summary:
-            "Prove the format before spending on it. A two week test, not a system: if 2 of the 20 pop, you know the format works and we build the real thing.",
+          summary: "Faceless only. The cheapest route into the format, run manually.",
           priceMinor: 250_00,
           billingPeriod: "ONE_TIME",
-          isRecommended: true,
-          badge: "Start here",
+          isRecommended: false,
           ctaLabel: "Select Pilot",
           features: [
             {
               id: "p1",
-              label: "Trend research on your niche, done once",
+              label: "Trend research on your niche",
               included: true,
               detail: "Delivered as a written format breakdown of what is working",
             },
-            {
-              id: "p2",
-              label: "Script generation from those winning formats",
-              included: true,
-              detail: "20 scripts",
-            },
+            { id: "p2", label: "20 scripts generated from winning formats", included: true },
             {
               id: "p3",
-              label: "Faceless video assembly",
+              label: "Faceless assembly",
               included: true,
-              detail: "App screen recording, voiceover, burned in captions, background music",
+              detail:
+                "App screen recording, ElevenLabs voiceover, burned in captions, background music",
             },
-            { id: "p4", label: "20 videos delivered as files", included: true },
-            { id: "p5", label: "Manual posting, you upload them yourself", included: true },
+            { id: "p4", label: "20 videos delivered as files, you post them", included: true },
+            { id: "p5", label: "Tracking sheet", included: true },
+            { id: "p6", label: "7 days of fixes", included: true },
             {
-              id: "p6",
-              label: "Google Sheet tracking what was posted and how it performed",
+              id: "p7",
+              label: "Running cost",
               included: true,
+              detail: "About $30. Two weeks of output, not a standing system",
             },
-            { id: "p7", label: "7 days of fixes", included: true },
             { id: "p8", label: "Automation and scheduler", included: false, detail: "Neither" },
-            { id: "p9", label: "AI avatar character", included: false, detail: "Faceless only" },
+            {
+              id: "p9",
+              label: "AI avatar or AI generated route",
+              included: false,
+              detail: "Faceless only",
+            },
             { id: "p10", label: "Tuning rounds", included: false, detail: "None included" },
           ],
         },
         {
           key: "core",
           name: "Core",
-          summary: "The actual machine, one account.",
+          summary: "One account, automated end to end. You pick the content route.",
           priceMinor: 450_00,
           billingPeriod: "ONE_TIME",
-          isRecommended: false,
+          isRecommended: true,
+          badge: "Recommended",
           ctaLabel: "Select Core",
           features: [
-            { id: "co1", label: "Everything in Pilot", included: true },
             {
-              id: "co2",
-              label: "Automated trend scraping, runs weekly",
+              id: "co1",
+              label: "Automated weekly trend scraping and format extraction",
               included: true,
-              detail: "Pulls top performing videos in your niche and extracts the format",
             },
+            { id: "co2", label: "Ongoing script generation", included: true },
             {
               id: "co3",
-              label: "Script generation on a schedule, not a one off batch",
+              label: "One consistent character",
               included: true,
+              detail: "Faceless, AI avatar, or AI generated with a clip library. Your call",
             },
             {
               id: "co4",
-              label: "One consistent AI avatar character",
+              label: "Automated assembly",
               included: true,
-              detail: "Voice locked, look locked",
+              detail: "Character plus app demo, split screen or picture in picture",
             },
-            {
-              id: "co5",
-              label: "Automatic video assembly",
-              included: true,
-              detail: "Avatar plus app demo, split screen or picture in picture",
-            },
+            { id: "co5", label: "Auto captions styled to the niche", included: true },
             {
               id: "co6",
-              label: "Auto captions, styled to match what is working in the niche",
-              included: true,
-            },
-            {
-              id: "co7",
-              label: "Direct posting to TikTok via the official Content Posting API",
+              label: "Direct posting via TikTok's official API",
               included: true,
               detail: "3 per day at times you set",
             },
             {
+              id: "co7",
+              label: "Content queue you can review and kill things from",
+              included: true,
+              detail: "Before they go out, not after",
+            },
+            {
               id: "co8",
-              label: "Content queue in a sheet",
+              label: "Performance pulled back in",
               included: true,
-              detail: "See what is about to go out and kill anything you do not like",
+              detail: "So you can see which hook won",
             },
+            { id: "co9", label: "14 days of fixes, one tuning round", included: true },
             {
-              id: "co9",
-              label: "Performance log pulled back in",
+              id: "co10",
+              label: "Running cost",
               included: true,
-              detail: "Views, likes, saves, so you can see which hook won",
+              detail:
+                "$35 to $130 a month depending on route. A clip library, if you want one, is a separate $300 to $450 paid to Higgsfield directly, not to me",
             },
-            { id: "co10", label: "14 days of fixes", included: true },
-            {
-              id: "co11",
-              label: "Tuning rounds",
-              included: true,
-              detail: "1 round after we see real numbers",
-            },
-            { id: "co12", label: "Multiple accounts", included: false, detail: "One account" },
-            { id: "co13", label: "Variation engine", included: false },
-            { id: "co14", label: "Hook A/B testing", included: false },
-            { id: "co15", label: "Auto pause on suppression", included: false },
+            { id: "co11", label: "Multiple accounts", included: false, detail: "One account" },
+            { id: "co12", label: "Variation engine", included: false },
+            { id: "co13", label: "Hook A/B testing", included: false },
+            { id: "co14", label: "Auto pause on suppression", included: false },
           ],
         },
         {
           key: "scale",
           name: "Scale",
           summary:
-            "Worth it once you have one account that is already working. Copying a losing formula to five accounts just loses five times faster.",
+            "Up to 5 accounts. Worth it once one account already works, because copying a losing formula to five accounts just loses five times faster.",
           priceMinor: 600_00,
           billingPeriod: "ONE_TIME",
           isRecommended: false,
           ctaLabel: "Select Scale",
           features: [
             { id: "s1", label: "Everything in Core", included: true },
-            {
-              id: "s2",
-              label: "Up to 5 accounts",
-              included: true,
-              detail: "Each with its own character, voice, name, and posting schedule",
-            },
+            { id: "s2", label: "Up to 5 characters, one per account", included: true },
             {
               id: "s3",
-              label: "Variation engine so no two accounts post the same asset",
+              label: "Clip library system",
               included: true,
-              detail: "Different hook, different voice, different caption, different music per account",
+              detail:
+                "The piece that makes AI generated content affordable at volume. Built once, recombined across hundreds of videos",
             },
             {
               id: "s4",
-              label: "Hook A/B testing",
+              label: "Variation engine so no two accounts post the same asset",
               included: true,
-              detail: "Same body, different opener, so you learn which first three seconds works",
+              detail: "Different hook, voice, caption and music per account",
             },
-            {
-              id: "s5",
-              label: "Screen recording library management",
-              included: true,
-              detail: "The system rotates demo clips instead of reusing the same one",
-            },
+            { id: "s5", label: "Hook A/B testing", included: true },
             {
               id: "s6",
-              label: "Cross account dashboard",
+              label: "Screen recording rotation",
               included: true,
-              detail: "Which account, which character, which hook is winning",
+              detail: "So the same demo clip does not appear twice in a row",
             },
+            { id: "s7", label: "Cross account dashboard", included: true },
             {
-              id: "s7",
-              label: "Auto pause",
+              id: "s8",
+              label: "Auto pause when an account's reach collapses",
               included: true,
-              detail:
-                "If an account's views collapse, the system stops posting to it and tells you, instead of burning content into a suppressed account",
+              detail: "Instead of burning content into a suppressed account",
             },
-            { id: "s8", label: "30 days of support", included: true },
-            { id: "s9", label: "Tuning rounds", included: true, detail: "2 rounds" },
+            { id: "s9", label: "30 days of support, two tuning rounds", included: true },
           ],
         },
       ],
@@ -585,74 +624,62 @@ async function main() {
       title: "The three side by side",
       rowHeaderLabel: "What you get",
       columns: [
-        { id: "pilot", label: "Pilot", note: "Start here", emphasis: true },
-        { id: "core", label: "Core" },
-        { id: "scale", label: "Scale" },
+        { id: "pilot", label: "Pilot", note: "$250" },
+        { id: "core", label: "Core", note: "$450 · recommended", emphasis: true },
+        { id: "scale", label: "Scale", note: "$600" },
       ],
       rows: [
         {
           id: "b1",
+          label: "Content route",
+          cells: [
+            "Faceless only",
+            "Faceless, avatar, or AI generated",
+            "Any route, per account",
+          ],
+        },
+        {
+          id: "b2",
           label: "Trend research",
           cells: ["One time, manual", "Automated weekly", "Automated weekly"],
         },
         {
-          id: "b2",
+          id: "b3",
           label: "Script generation",
           cells: ["20 scripts, one batch", "Ongoing", "Ongoing, per account"],
         },
-        { id: "b3", label: "Character", cells: ["Faceless", "1 AI avatar", "Up to 5 avatars"] },
-        { id: "b4", label: "Video assembly", cells: ["Semi manual", "Automated", "Automated"] },
-        {
-          id: "b5",
-          label: "Captions",
-          cells: ["Included", "Included", "Included, style tested"],
-        },
+        { id: "b4", label: "Characters", cells: ["1, faceless", "1", "Up to 5"] },
+        { id: "b5", label: "Video assembly", cells: ["Semi manual", "Automated", "Automated"] },
         {
           id: "b6",
           label: "Posting",
           cells: ["You post manually", "Auto, 1 account", "Auto, up to 5 accounts"],
         },
-        { id: "b7", label: "Variation engine", cells: ["No", "No", "Yes"] },
-        { id: "b8", label: "Hook A/B testing", cells: ["No", "No", "Yes"] },
+        { id: "b7", label: "Clip library system", cells: ["No", "No", "Yes"] },
+        { id: "b8", label: "Variation engine", cells: ["No", "No", "Yes"] },
+        { id: "b9", label: "Hook A/B testing", cells: ["No", "No", "Yes"] },
         {
-          id: "b9",
+          id: "b10",
           label: "Performance tracking",
           cells: ["Manual sheet", "Auto pulled", "Cross account dashboard"],
         },
-        { id: "b10", label: "Auto pause on suppression", cells: ["No", "No", "Yes"] },
-        { id: "b11", label: "Support", cells: ["7 days", "14 days", "30 days"] },
-        { id: "b12", label: "Tuning rounds", cells: ["0", "1", "2"] },
-        { id: "b13", label: "Price", cells: ["$250", "$450", "$600"], emphasis: true },
-      ],
-    },
-  });
-
-  // ── Add-on ─────────────────────────────────────────────────────
-  blocks.push({
-    type: "ADD_ONS",
-    data: {
-      eyebrow: "Optional",
-      title: "Add-on",
-      intro: "Available after the Scale build, not before.",
-      addOns: [
+        { id: "b11", label: "Auto pause on suppression", cells: ["No", "No", "Yes"] },
+        { id: "b12", label: "Support", cells: ["7 days", "14 days", "30 days"] },
+        { id: "b13", label: "Tuning rounds", cells: ["0", "1", "2"] },
         {
-          key: "extra-account",
-          name: "Additional TikTok account, 6 to 10",
-          description:
-            "Each additional account gets its own character, voice, name and posting schedule, and joins the variation engine so it never duplicates another account's asset. Priced per account. Note that each one also needs its own phone number, email and warmed account, which is on you rather than on the build.",
-          priceMinor: 40_00,
-          billingPeriod: "ONE_TIME",
-          selectedByDefault: false,
+          id: "b14",
+          label: "Typical running cost",
+          cells: ["~$30, one off", "$35 to $130 / mo", "$170 to $500 / mo"],
         },
+        { id: "b15", label: "Price", cells: ["$250", "$450", "$600"], emphasis: true },
       ],
     },
   });
 
   // ── Third party running costs ──────────────────────────────────
-  // Figures are the sender's own, taken verbatim from the source document, so
-  // they carry aiGenerated: false. The provenance gate exists to stop
-  // AI-guessed vendor pricing reaching a client, not to re-litigate numbers a
-  // human wrote down.
+  // Figures are the sender's own, taken from the source document, so they carry
+  // aiGenerated: false. The provenance gate exists to stop AI-guessed vendor
+  // pricing reaching a client, not to re-litigate numbers a human wrote down.
   const verified = new Date().toISOString();
   blocks.push({
     type: "SERVICE_COSTS",
@@ -660,10 +687,10 @@ async function main() {
       eyebrow: "Running costs",
       title: "What the tooling actually costs",
       intro:
-        "You pay these directly to the vendors, not to me. Nothing here is marked up. The figures below are the Core setup on one account with an AI avatar, at 90 videos a month, which is the configuration I would actually run. Where a free path is good enough I have taken it.",
+        "You pay these directly to the vendors, not to me. Nothing here is marked up. The figures below are the Core setup on one account on the AI avatar route, at 90 videos a month, which is the configuration I would actually run. Where a free path is good enough I have taken it.",
       showTotals: true,
       footnote:
-        "Pilot on the faceless path is about $25 all in. Five accounts with avatars is $150 to $180. The scenario table below has the rest. The free paths here are not compromises — self hosted ffmpeg and n8n are what I would use at this volume regardless.",
+        "That comes to roughly $63 a month at these plan levels. Call it $65 to $80 once real usage moves around: script volume, extra voices, and the occasional re-render. Pilot on the faceless path is about $30 all in. The AI generated route is a different order of magnitude and the scenario table below has it.",
       rows: [
         {
           id: "sc1",
@@ -685,11 +712,11 @@ async function main() {
           purpose: "Script generation",
           planName: "Pay as you go",
           vendorUrl: "https://www.anthropic.com/pricing",
-          monthlyCostMinor: 5_00,
+          monthlyCostMinor: 10_00,
           setupCostMinor: 0,
           billedTo: "CLIENT",
           notes:
-            "Roughly $3 to $8 per month at this volume. The free tier works, but the API is worth it for reliability on a schedule.",
+            "Roughly $5 to $10 per month at this volume. The free tier works, but the API is worth it for reliability on a schedule.",
           aiGenerated: false,
           verifiedAt: verified,
         },
@@ -715,7 +742,8 @@ async function main() {
           monthlyCostMinor: 29_00,
           setupCostMinor: 0,
           billedTo: "CLIENT",
-          notes: "Core and Scale only. Scales to about $89 for 5 characters. Not needed on Pilot.",
+          notes:
+            "Avatar route only. Team at about $89 covers multiple characters for Scale. Not needed on the faceless route.",
           aiGenerated: false,
           verifiedAt: verified,
         },
@@ -728,7 +756,7 @@ async function main() {
           setupCostMinor: 0,
           billedTo: "CLIENT",
           notes:
-            "Free, with Whisper for the caption timing. Creatomate is about $41 and Submagic about $16 if you would rather not self host. I will self host it.",
+            "Free, with Whisper for caption timing. Creatomate is about $41 and Submagic about $16 if you would rather not self host. I will self host it.",
           aiGenerated: false,
           verifiedAt: verified,
         },
@@ -768,19 +796,7 @@ async function main() {
           monthlyCostMinor: 2_00,
           setupCostMinor: 0,
           billedTo: "CLIENT",
-          notes: "Video files add up fast at 90 a month. Get the $2 plan, do not optimise this.",
-          aiGenerated: false,
-          verifiedAt: verified,
-        },
-        {
-          id: "sc9",
-          vendor: "Google Sheets",
-          purpose: "Tracking and content queue",
-          planName: "Free",
-          monthlyCostMinor: 0,
-          setupCostMinor: 0,
-          billedTo: "CLIENT",
-          notes: "Enough for this. Do not pay for a content tool yet.",
+          notes: "Video files pile up fast at 90 a month. Get the $2 plan, do not optimise this.",
           aiGenerated: false,
           verifiedAt: verified,
         },
@@ -796,40 +812,55 @@ async function main() {
       title: "Realistic monthly spend",
       rowHeaderLabel: "Setup",
       columns: [
-        { id: "vol", label: "Volume" },
-        { id: "cost", label: "Monthly cost" },
+        { id: "vol", label: "Videos per month" },
+        { id: "first", label: "First month" },
+        { id: "ongoing", label: "Ongoing monthly" },
       ],
       rows: [
         {
           id: "m1",
           label: "Pilot, faceless, manual posting",
-          cells: ["20 videos, one off", "About $25 total"],
+          cells: ["20, one off", "~$30", "n/a"],
         },
-        { id: "m2", label: "Core, 1 account, faceless", cells: ["90 per month", "$28 to $35"] },
+        {
+          id: "m2",
+          label: "Core, 1 account, faceless",
+          cells: ["90", "$35 to $45", "$35 to $45"],
+        },
         {
           id: "m3",
           label: "Core, 1 account, AI avatar",
-          cells: ["90 per month", "$55 to $65"],
+          cells: ["90", "$65 to $80", "$65 to $80"],
           emphasis: true,
         },
         {
           id: "m4",
-          label: "Scale, 3 accounts, AI avatar",
-          cells: ["270 per month", "$110 to $130"],
+          label: "Core, 1 account, AI generated, library",
+          cells: ["90", "$420 to $530", "$95 to $130"],
         },
         {
           id: "m5",
-          label: "Scale, 5 accounts, AI avatar",
-          cells: ["450 per month", "$150 to $180"],
+          label: "Core, 1 account, AI generated, fresh every video",
+          cells: ["90", "~$1,000", "~$1,000"],
         },
         {
           id: "m6",
-          label: "Scale, 5 accounts, fully AI generated",
-          cells: ["450 per month", "$700 to $900"],
+          label: "Scale, 3 accounts, AI avatar",
+          cells: ["270", "$170 to $200", "$170 to $200"],
+        },
+        {
+          id: "m7",
+          label: "Scale, 5 accounts, AI avatar",
+          cells: ["450", "$270 to $320", "$270 to $320"],
+        },
+        {
+          id: "m8",
+          label: "Scale, 5 accounts, AI generated, libraries",
+          cells: ["450", "$1,700 to $2,300", "$400 to $500"],
         },
       ],
       footnote:
-        "The jump to fully AI generated video is where costs stop being trivial. I would not go there until an account is already earning.",
+        "Read the last two rows against each other. Five accounts of avatar content is about $300 a month. Five accounts of fully generated content is $2,000 to get started even with libraries, for the same posting volume.",
     },
   });
 
@@ -846,12 +877,12 @@ async function main() {
           id: "tl1",
           vendor: "Trend scraping",
           vendorUrl: "https://ads.tiktok.com/business/creativecenter",
-          freeLimit: "TikTok Creative Center, free, manual",
+          freeLimit: "TikTok Creative Center, manual",
           freeCaveat:
             "Manual means somebody sits and reads it. Fine weekly, painful daily, and it does not feed the pipeline on its own.",
           paidLimit: "Apify TikTok scraper",
           paidPriceNote: "About $30 per month",
-          recommendation: "Core and Scale. The free path works, it is just slower.",
+          recommendation: "The free path works, just slower.",
           aiGenerated: false,
           verifiedAt: verified,
         },
@@ -863,8 +894,8 @@ async function main() {
           freeCaveat:
             "Rate limits, and no reliable automation hook. Fine for one batch, not for a schedule.",
           paidLimit: "Claude API",
-          paidPriceNote: "Roughly $3 to $8 per month at this volume",
-          recommendation: "Worth it for reliability. This is the cheapest line on the list.",
+          paidPriceNote: "About $5 to $10 per month",
+          recommendation: "The API is worth it for reliability.",
           aiGenerated: false,
           verifiedAt: verified,
         },
@@ -872,12 +903,12 @@ async function main() {
           id: "tl3",
           vendor: "Voice",
           vendorUrl: "https://elevenlabs.io/pricing",
-          freeLimit: "Vapi or browser TTS",
+          freeLimit: "Browser TTS, poor quality",
           freeCaveat:
-            "Quality is poor and it is audible in the first two seconds, which is exactly where you lose the viewer.",
+            "It is audible in the first two seconds, which is exactly where you lose the viewer.",
           paidLimit: "ElevenLabs Creator",
           paidPriceNote: "$22 per month",
-          recommendation: "Do not cheap out here. The voice carries it.",
+          recommendation: "All routes. Do not cheap out, the voice carries it.",
           aiGenerated: false,
           verifiedAt: verified,
         },
@@ -888,22 +919,23 @@ async function main() {
           freeLimit: "None",
           freeCaveat:
             "There is no free path to a consistent avatar. Faceless is the free alternative, and that is a different format rather than a cheaper version of the same one.",
-          paidLimit: "HeyGen Creator",
-          paidPriceNote: "$29 per month, scaling to about $89 for 5 characters",
-          recommendation: "Core and Scale only. Not needed for the Pilot.",
+          paidLimit: "HeyGen Creator, or Team for multiple characters",
+          paidPriceNote: "$29 per month, or $89 for multiple characters",
+          recommendation: "Core and Scale, avatar route.",
           aiGenerated: false,
           verifiedAt: verified,
         },
         {
           id: "tl5",
-          vendor: "Fully AI generated video",
+          vendor: "Fully AI generated clips",
           vendorUrl: "https://higgsfield.ai/pricing",
           freeLimit: "None",
-          freeCaveat: "No free path at all, and the per video cost is the whole story here.",
-          paidLimit: "Veo or Higgsfield",
-          paidPriceNote: "Roughly $1.50 to $3 per finished video",
+          freeCaveat:
+            "No free path at all, and generating fresh every video is where the money goes: 3 to 4 clips per video and 2 to 3 discarded generations per usable clip.",
+          paidLimit: "Higgsfield or Veo",
+          paidPriceNote: "$8 to $14 per finished video fresh, or $300 to $450 once for a library",
           recommendation:
-            "Optional upgrade. I would not go there until an account is already earning.",
+            "Optional premium route. If you take it, build the library rather than generating fresh.",
           aiGenerated: false,
           verifiedAt: verified,
         },
@@ -911,12 +943,12 @@ async function main() {
           id: "tl6",
           vendor: "Video assembly",
           vendorUrl: "https://creatomate.com/pricing",
-          freeLimit: "ffmpeg, self hosted, free",
+          freeLimit: "ffmpeg self hosted, free",
           freeCaveat:
             "Self hosting means it runs on a machine somebody maintains. At this volume that is not a real burden.",
           paidLimit: "Creatomate",
           paidPriceNote: "About $41 per month",
-          recommendation: "The free path is fine. I will self host it.",
+          recommendation: "The free path is fine. I self host it.",
           aiGenerated: false,
           verifiedAt: verified,
         },
@@ -924,7 +956,7 @@ async function main() {
           id: "tl7",
           vendor: "Captions",
           vendorUrl: "https://www.submagic.co/pricing",
-          freeLimit: "ffmpeg plus Whisper, free",
+          freeLimit: "Whisper plus ffmpeg, free",
           freeCaveat:
             "Slightly rougher styling than a purpose built tool, and you tune the look once rather than per video.",
           paidLimit: "Submagic",
@@ -954,8 +986,7 @@ async function main() {
             "Needs app approval from TikTok, which has been taking anywhere from 2 days to 2 weeks and is outside my control.",
           paidLimit: "Blotato or Postiz",
           paidPriceNote: "About $29 per month",
-          recommendation:
-            "The official API is free and safer. Use it. The paid scheduler is the fallback if approval stalls.",
+          recommendation: "The official API is free and safer. Use it.",
           aiGenerated: false,
           verifiedAt: verified,
         },
@@ -967,16 +998,7 @@ async function main() {
           freeCaveat: "15GB fills fast once you are generating 90 videos a month.",
           paidLimit: "Drive 100GB",
           paidPriceNote: "$2 per month",
-          recommendation: "Get the $2 plan. This is not worth optimising.",
-          aiGenerated: false,
-          verifiedAt: verified,
-        },
-        {
-          id: "tl11",
-          vendor: "Tracking",
-          freeLimit: "Google Sheets, free",
-          freeCaveat: "No meaningful limit at this volume.",
-          recommendation: "Sheets is enough.",
+          recommendation: "Video files pile up fast. Get the $2 plan.",
           aiGenerated: false,
           verifiedAt: verified,
         },
@@ -1008,10 +1030,11 @@ async function main() {
         {
           id: "t2",
           name: "Character and first 5 videos",
-          description: "Character and voice built, first 5 videos for your approval.",
+          description:
+            "Content route chosen, character and voice built, clip library generated if you are on the AI route, first 5 videos for your approval.",
           startOffsetDays: 2,
           durationDays: 2,
-          deliverables: ["Character and voice", "First 5 videos for sign off"],
+          deliverables: ["Character and voice", "Clip library if applicable", "First 5 videos"],
           isPaymentMilestone: false,
         },
         {
@@ -1061,6 +1084,14 @@ async function main() {
       eyebrow: "Straight talk",
       title: "Honest notes",
       body: doc(
+        heading("On cost, since you asked"),
+        p(
+          "Generating a fresh AI person for every video runs about $8 to $14 per finished video once you count the 3 or 4 clips a 25 second reaction needs and the 2 to 3 generations you throw away per usable clip. At 3 posts a day that is around $1,000 a month for one account. It is not a volume format at that price. The clip library approach is what makes it work, and if someone quotes you cheap per video AI UGC without mentioning reuse, they have not built one.",
+        ),
+        heading("Pick your route by budget, not by preference"),
+        p(
+          "Faceless is the cheapest and it converts fine for app demos because the app is the star anyway. AI avatar is the best value at volume because it is a flat subscription instead of pay per generation. Fully AI generated looks the best and costs 10 to 20 times more. All three are supported by the same pipeline, so you can start faceless and switch later without rebuilding.",
+        ),
         heading("AI content labeling"),
         p(
           "TikTok requires AI generated content to be disclosed, and it auto detects a lot of it anyway via C2PA metadata. Labeled AI content is not banned and does not get automatically suppressed, but it does change how some viewers respond. I will build the label in by default. Hiding it is not worth the account.",
@@ -1086,16 +1117,16 @@ async function main() {
     type: "RICH_TEXT",
     data: {
       eyebrow: "My recommendation",
-      title: "Pilot at $250 now, Core at $450 after",
+      title: "Core at $450, on the AI avatar route",
       body: doc(
         p(
-          "Start small. That is $700 total across two contracts, but you only spend the second $450 once you have evidence. Run the Pilot for two weeks and only then decide. If the format works you will know from 20 videos. If it does not, you saved $350 and found out fast.",
+          "That is $70 a month running, one account, fully automated. It is the sane version of this: a flat subscription instead of pay per generation, a face that never drifts, and the app filling most of the frame anyway.",
         ),
         p(
-          "If you would rather skip the test and commit, Core at $450 is the right single choice.",
+          "If you want to test the format before spending on faces, Pilot at $250 faceless runs about $30 and gives you 20 videos over two weeks. If nothing lands, you spent $280 total finding out.",
         ),
         p(
-          "Scale only makes sense once you have one account that is already working, because copying a losing formula to five accounts just loses five times faster.",
+          "Go fully AI generated only if the avatar version is already getting views and you want to raise the ceiling, and even then build the clip library rather than generating fresh. Scale at $600 is for when one account works and you want to clone the formula, not before.",
         ),
       ),
     },
@@ -1120,7 +1151,7 @@ async function main() {
         ),
         bold("Third party costs"),
         p(
-          "Tooling costs are billed directly to you by those vendors and are not marked up by me. Estimates assume 3 posts per day per account and will vary with actual usage.",
+          "Tooling costs are billed directly to you by those vendors and are not marked up by me. That includes any Higgsfield or Veo spend on a clip library. Estimates assume 3 posts per day per account and will vary with actual usage and with the content route you pick.",
         ),
       ),
     },
