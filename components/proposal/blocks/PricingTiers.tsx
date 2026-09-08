@@ -29,13 +29,20 @@ export function PricingTiers({ data, locale }: { data: PricingTiersBlock; locale
     <Section id="pricing">
       <SectionHeader eyebrow={data.eyebrow} title={data.title} intro={data.intro} />
 
+      {/* Cards align row-by-row via subgrid: name, summary, price, features,
+          CTA. Without it a tier whose summary runs to four lines pushes its
+          price below its neighbours', and three prices at three different
+          heights is the first thing a client notices about a pricing table.
+          The row template is applied at whatever breakpoint the columns
+          appear; below that each card is a plain flex column. */}
       <div
         className={cn(
           "grid gap-5",
           data.tiers.length === 1 && "max-w-md",
-          data.tiers.length === 2 && "sm:grid-cols-2",
-          data.tiers.length === 3 && "lg:grid-cols-3",
-          data.tiers.length >= 4 && "sm:grid-cols-2 xl:grid-cols-4",
+          data.tiers.length === 2 && "sm:grid-cols-2 sm:grid-rows-[auto_auto_auto_1fr_auto]",
+          data.tiers.length === 3 && "lg:grid-cols-3 lg:grid-rows-[auto_auto_auto_1fr_auto]",
+          data.tiers.length >= 4 &&
+            "sm:grid-cols-2 sm:grid-rows-[auto_auto_auto_1fr_auto] xl:grid-cols-4",
         )}
       >
         {data.tiers.map((tier) => {
@@ -50,6 +57,9 @@ export function PricingTiers({ data, locale }: { data: PricingTiersBlock; locale
               data-selected={isSelected || undefined}
               className={cn(
                 "doc-avoid-break relative flex flex-col rounded-2xl border p-6 transition-colors sm:p-7",
+                data.tiers.length === 2 && "sm:grid sm:grid-rows-subgrid sm:row-span-5",
+                data.tiers.length === 3 && "lg:grid lg:grid-rows-subgrid lg:row-span-5",
+                data.tiers.length >= 4 && "sm:grid sm:grid-rows-subgrid sm:row-span-5",
                 isSelected
                   ? "border-[var(--doc-accent)] bg-[var(--doc-bg-elevated)]"
                   : "border-[var(--doc-border)] bg-[var(--doc-bg-elevated)]",
@@ -70,11 +80,9 @@ export function PricingTiers({ data, locale }: { data: PricingTiersBlock; locale
                 {tier.name}
               </h3>
 
-              {tier.summary ? (
-                <p className="mt-2 min-h-[2.75rem] text-[0.875rem] leading-[1.6] text-[var(--doc-fg-muted)]">
-                  {tier.summary}
-                </p>
-              ) : null}
+              <p className="mt-2 text-[0.875rem] leading-[1.6] text-[var(--doc-fg-muted)]">
+                {tier.summary}
+              </p>
 
               <div className="mt-5 flex items-baseline gap-1.5 border-b border-[var(--doc-border)] pb-5">
                 <span className="money text-[2rem] font-semibold leading-none tracking-[-0.02em] text-[var(--doc-fg)]">
@@ -111,30 +119,32 @@ export function PricingTiers({ data, locale }: { data: PricingTiersBlock; locale
                 ))}
               </ul>
 
-              {selectable ? (
-                <button
-                  type="button"
-                  onClick={() => selectTier(tier.key)}
-                  aria-pressed={isSelected}
-                  className={cn(
-                    "mt-7 w-full rounded-xl px-4 py-3 text-[0.875rem] font-medium transition-opacity",
-                    isSelected
-                      ? "text-white"
-                      : "border border-[var(--doc-border-strong)] text-[var(--doc-fg)] hover:opacity-80",
-                  )}
-                  style={
-                    isSelected
-                      ? { background: "linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)" }
-                      : undefined
-                  }
-                >
-                  {isSelected ? "Selected" : tier.ctaLabel}
-                </button>
-              ) : isSelected ? (
-                <div className="mt-7 rounded-xl border border-[var(--doc-accent)] px-4 py-3 text-center text-[0.875rem] font-medium text-[var(--doc-accent)]">
-                  Selected
-                </div>
-              ) : null}
+              <div className="mt-7">
+                {selectable ? (
+                  <button
+                    type="button"
+                    onClick={() => selectTier(tier.key)}
+                    aria-pressed={isSelected}
+                    className={cn(
+                      "w-full rounded-xl px-4 py-3 text-[0.875rem] font-medium transition-opacity",
+                      isSelected
+                        ? "text-white"
+                        : "border border-[var(--doc-border-strong)] text-[var(--doc-fg)] hover:opacity-80",
+                    )}
+                    style={
+                      isSelected
+                        ? { background: "linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)" }
+                        : undefined
+                    }
+                  >
+                    {isSelected ? "Selected" : tier.ctaLabel}
+                  </button>
+                ) : isSelected ? (
+                  <div className="rounded-xl border border-[var(--doc-accent)] px-4 py-3 text-center text-[0.875rem] font-medium text-[var(--doc-accent)]">
+                    Selected
+                  </div>
+                ) : null}
+              </div>
             </div>
           );
         })}
