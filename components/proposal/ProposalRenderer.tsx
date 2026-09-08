@@ -18,7 +18,10 @@ import { ComparisonTable } from "@/components/proposal/blocks/ComparisonTable";
 import { Timeline } from "@/components/proposal/blocks/Timeline";
 import { PricingTiers } from "@/components/proposal/blocks/PricingTiers";
 import { AddOns } from "@/components/proposal/blocks/AddOns";
-import { SignatureBlock } from "@/components/proposal/blocks/SignatureBlock";
+import {
+  SignatureBlock,
+  type ExecutedSignatureView,
+} from "@/components/proposal/blocks/SignatureBlock";
 import {
   BlueprintOffer,
   PaymentSection,
@@ -45,6 +48,7 @@ export function ProposalRenderer({
   locale = "en-US",
   interactive = false,
   signatureAction,
+  executedSignature,
   taxRateBps = 0,
 }: {
   snapshot: ProposalSnapshot;
@@ -54,6 +58,8 @@ export function ProposalRenderer({
   interactive?: boolean;
   /** Sign / approve control injected by the public viewer. */
   signatureAction?: ReactNode;
+  /** Present once signed, so the document renders as an executed record. */
+  executedSignature?: ExecutedSignatureView | null;
   taxRateBps?: number;
 }) {
   const printMode = mode === "print";
@@ -95,7 +101,7 @@ export function ProposalRenderer({
             {i > 0 && block.type !== "COVER" ? (
               <GradientRule className="mx-auto max-w-[68rem]" />
             ) : null}
-            {renderBlock(block, ctx, locale, signatureAction)}
+            {renderBlock(block, ctx, locale, signatureAction, executedSignature)}
           </div>
         ))}
 
@@ -110,6 +116,7 @@ function renderBlock(
   ctx: DocContext,
   locale: string,
   signatureAction?: ReactNode,
+  executedSignature?: ExecutedSignatureView | null,
 ): ReactNode {
   switch (block.type) {
     case "COVER":
@@ -141,7 +148,14 @@ function renderBlock(
       // toggle governs the document rather than just the checkout route.
       return ctx.snapshot.paymentEnabled ? <PaymentSection data={block.data} ctx={ctx} /> : null;
     case "SIGNATURE":
-      return <SignatureBlock data={block.data} ctx={ctx} action={signatureAction} />;
+      return (
+        <SignatureBlock
+          data={block.data}
+          ctx={ctx}
+          action={signatureAction}
+          executed={executedSignature}
+        />
+      );
     default: {
       // Exhaustiveness guard: adding a BlockType without a renderer is a
       // compile error, not a silently blank section in a client's document.

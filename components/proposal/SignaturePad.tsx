@@ -197,9 +197,11 @@ export function renderTypedSignature(name: string): string | null {
   if (!ctx) return null;
   ctx.scale(dpr, dpr);
 
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, width, height);
-
+  // Deliberately NO background fill. A transparent PNG sits cleanly on any
+  // document theme; a white one shows as a box, and inverting it for the dark
+  // theme turns that box black. The drawn canvas is transparent for the same
+  // reason — its white appearance is CSS on the element, not baked into the
+  // exported image.
   ctx.fillStyle = "#111111";
   ctx.font = 'italic 46px "Segoe Script", "Bradley Hand", "Snell Roundhand", cursive';
   ctx.textBaseline = "middle";

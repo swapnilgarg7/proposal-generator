@@ -23,7 +23,8 @@ export function AcceptancePanel({
   requireTitle,
   externalCtaLabel,
   alreadyAccepted,
-  acceptedLabel,
+  reference,
+  acceptedAt,
 }: {
   token: string;
   agreementMode: "INLINE_ESIGN" | "EXTERNAL_UPWORK" | "EXTERNAL_OTHER";
@@ -32,7 +33,8 @@ export function AcceptancePanel({
   requireTitle: boolean;
   externalCtaLabel: string;
   alreadyAccepted: boolean;
-  acceptedLabel: string | null;
+  reference: string;
+  acceptedAt: Date | string | null;
 }) {
   const isExternal = agreementMode !== "INLINE_ESIGN";
   const { selectedTierKey, selectedAddOnKeys, totals, currency, tiers } = useSelection();
@@ -57,23 +59,76 @@ export function AcceptancePanel({
   );
 
   if (status === "done") {
+    const when = acceptedAt
+      ? new Intl.DateTimeFormat("en-US", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          timeZoneName: "short",
+        }).format(new Date(acceptedAt))
+      : null;
+
     return (
       <div
-        className="rounded-xl border p-6"
+        className="rounded-xl border p-6 sm:p-7"
         style={{
           borderColor: "color-mix(in srgb, var(--doc-success) 40%, transparent)",
           background: "color-mix(in srgb, var(--doc-success) 8%, transparent)",
         }}
       >
-        <p className="font-medium text-[var(--doc-fg)]">
-          {isExternal ? "Scope approved" : "Signed — thank you"}
-        </p>
-        <p className="mt-1.5 text-[0.9375rem] leading-relaxed text-[var(--doc-fg-muted)]">
-          {acceptedLabel ??
-            (isExternal
-              ? "Thanks. The contract will follow shortly, and work begins once it's accepted."
-              : "A copy has been recorded against this proposal. We'll be in touch with next steps.")}
-        </p>
+        <div className="flex items-start gap-3.5">
+          <span
+            aria-hidden
+            className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white"
+            style={{ background: "var(--doc-success)" }}
+          >
+            <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5">
+              <path
+                d="M3.5 8.5l3 3 6-7"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+
+          <div className="min-w-0 flex-1">
+            <p className="text-[1.0625rem] font-semibold text-[var(--doc-fg)]">
+              {isExternal ? "Scope approved" : "Signed"}
+            </p>
+            <p className="mt-1.5 text-[0.9375rem] leading-relaxed text-[var(--doc-fg-muted)]">
+              {isExternal
+                ? "Thank you. The contract will follow through Upwork shortly, and work begins once you accept it there."
+                : "Thank you. This document is now executed, and your signature appears on it above."}
+            </p>
+
+            <dl className="mt-5 grid gap-x-8 gap-y-3 border-t border-[var(--doc-border)] pt-5 sm:grid-cols-2">
+              <Detail label="Reference" value={reference} mono />
+              {when ? <Detail label={isExternal ? "Approved" : "Signed"} value={when} /> : null}
+              {selectedTier ? <Detail label="Package" value={selectedTier.name} /> : null}
+              {selectedTier ? (
+                <Detail
+                  label="Amount"
+                  mono
+                  value={
+                    (totals.totalDueNowMinor > 0
+                      ? formatMoney(totals.totalDueNowMinor, currency)
+                      : formatMoney(selectedTier.priceMinor, currency)) +
+                    (selectedTier.billingPeriod === "MONTHLY" ? " / month" : "")
+                  }
+                />
+              ) : null}
+            </dl>
+
+            <p className="mt-5 text-[0.8125rem] leading-relaxed text-[var(--doc-fg-subtle)]">
+              Keep this link. It stays available as your copy of what was agreed, and quoting the
+              reference above identifies this exact version.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -127,7 +182,12 @@ export function AcceptancePanel({
         setError(result.error);
         return;
       }
+      // Reload rather than just flipping local state: the server can now render
+      // the document as executed, with the signature and date filled in. Showing
+      // a toast over an apparently unsigned document is unconvincing when
+      // someone has just committed to a contract.
       setStatus("done");
+      window.location.reload();
     } catch {
       setStatus("idle");
       setError("Something went wrong. Please try again.");
@@ -277,5 +337,32 @@ export function AcceptancePanel({
         </p>
       ) : null}
     </form>
+  );
+}
+
+function Detail({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div>
+      <dt className="font-mono text-[0.625rem] uppercase tracking-[0.14em] text-[var(--doc-fg-subtle)]">
+        {label}
+      </dt>
+      <dd
+        className={
+          mono
+            ? "money mt-1 text-[0.9375rem] font-medium text-[var(--doc-fg)]"
+            : "mt-1 text-[0.9375rem] text-[var(--doc-fg)]"
+        }
+      >
+        {value}
+      </dd>
+    </div>
   );
 }

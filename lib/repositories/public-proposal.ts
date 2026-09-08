@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { hashShareToken, proposalSnapshotSchema, type ProposalSnapshot } from "@/lib/versioning/snapshot";
 
 /**
@@ -17,6 +18,18 @@ export type PublicProposalResult =
   | { ok: true; proposal: PublicProposal }
   | { ok: false; reason: "not_found" | "revoked" | "expired" | "not_published" | "corrupt" };
 
+export interface ExecutedSignature {
+  signerName: string;
+  signerTitle: string | null;
+  signerEmail: string;
+  signedAt: Date;
+  method: "TYPED" | "DRAWN";
+  /** Short-lived signed URL; the bucket is private. */
+  imageUrl: string | null;
+  contentHash: string;
+  emailVerified: boolean;
+}
+
 export interface PublicProposal {
   id: string;
   versionId: string;
@@ -27,6 +40,11 @@ export interface PublicProposal {
   paymentEnabled: boolean;
   agreementMode: "INLINE_ESIGN" | "EXTERNAL_UPWORK" | "EXTERNAL_OTHER";
   alreadySigned: boolean;
+  /** Present once executed, so the document can show itself as signed. */
+  signature: ExecutedSignature | null;
+  acceptedAt: Date | null;
+  /** Human-quotable reference, derived from the id and the signed content. */
+  reference: string;
 }
 
 export async function getPublicProposalByToken(token: string): Promise<PublicProposalResult> {
@@ -36,6 +54,7 @@ export async function getPublicProposalByToken(token: string): Promise<PublicPro
     where: { publicTokenHash: hashShareToken(token) },
     include: {
       publishedVersion: true,
+      signatures: { orderBy: { signedAt: "desc" }, take: 1 },
       _count: { select: { signatures: true } },
     },
   });
@@ -59,6 +78,23 @@ export async function getPublicProposalByToken(token: string): Promise<PublicPro
     return { ok: false, reason: "corrupt" };
   }
 
+  // Signature images live in a private bucket, so hand out a short-lived signed
+  // URL rather than a path. One hour is plenty to read a confirmation.
+  const sig = proposal.signatures[0] ?? null;
+  let imageUrl: string | null = null;
+  if (sig?.imagePath) {
+    try {
+      const admin = createSupabaseAdminClient();
+      const { data } = await admin.storage
+        .from("signatures")
+        .createSignedUrl(sig.imagePath, 60 * 60);
+      imageUrl = data?.signedUrl ?? null;
+    } catch (e) {
+      // A missing image must not stop someone seeing their signed document.
+      console.error("Could not sign signature image URL", e);
+    }
+  }
+
   return {
     ok: true,
     proposal: {
@@ -71,6 +107,22 @@ export async function getPublicProposalByToken(token: string): Promise<PublicPro
       paymentEnabled: proposal.paymentEnabled,
       agreementMode: proposal.agreementMode,
       alreadySigned: proposal._count.signatures > 0,
+      acceptedAt: proposal.acceptedAt,
+      // Short, unambiguous, and safe to read out over a phone call. Derived
+      // rather than stored: it cannot drift from the record it points at.
+      reference: `${proposal.id.slice(-6)}-${proposal.publishedVersion.contentHash.slice(0, 6)}`.toUpperCase(),
+      signature: sig
+        ? {
+            signerName: sig.signerName,
+            signerTitle: sig.signerTitle,
+            signerEmail: sig.signerEmail,
+            signedAt: sig.signedAt,
+            method: sig.method,
+            imageUrl,
+            contentHash: sig.contentHash,
+            emailVerified: Boolean(sig.emailVerifiedAt),
+          }
+        : null,
     },
   };
 }

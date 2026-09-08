@@ -46,6 +46,11 @@
    forward PDFs into procurement.
    ═══════════════════════════════════════════════════════════════ */
 
+/* Signatures are captured as black ink on white. On a dark document that would
+   be invisible, so invert it there and leave it untouched in light and print. */
+[data-doc-theme="dark"] { --signature-filter: invert(1); }
+[data-doc-theme="light"] { --signature-filter: none; }
+
 [data-doc-theme="dark"] {
   --doc-bg: #0A0A0A;
   --doc-bg-elevated: #111111;

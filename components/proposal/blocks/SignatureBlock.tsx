@@ -15,15 +15,29 @@ type SignatureBlockData = z.infer<typeof signatureBlockSchema>;
  *    NOT collect a signature, emit a certificate, or use the word "sign" —
  *    claiming an e-signature that did not happen would misrepresent the record.
  */
+export interface ExecutedSignatureView {
+  signerName: string;
+  signerTitle: string | null;
+  signerEmail: string;
+  signedAt: Date | string;
+  method: "TYPED" | "DRAWN";
+  imageUrl: string | null;
+  emailVerified: boolean;
+  reference: string;
+}
+
 export function SignatureBlock({
   data,
   ctx,
   action,
+  executed,
 }: {
   data: SignatureBlockData;
   ctx: DocContext;
   /** Interactive control supplied by the public viewer; omitted in print. */
   action?: React.ReactNode;
+  /** Present once signed, so the document renders as an executed record. */
+  executed?: ExecutedSignatureView | null;
 }) {
   const { agreementMode, externalAgreementUrl, externalAgreementNote, organization } = ctx.snapshot;
   const isExternal = agreementMode !== "INLINE_ESIGN";
@@ -94,15 +108,21 @@ export function SignatureBlock({
         <div className="grid gap-8 sm:grid-cols-2">
           <SignatureSlot
             label="For the client"
-            name={ctx.snapshot.client.contactName}
+            name={executed?.signerName ?? ctx.snapshot.client.contactName}
             org={ctx.snapshot.client.company}
-            title={ctx.snapshot.client.contactTitle}
+            title={executed?.signerTitle ?? ctx.snapshot.client.contactTitle}
+            signedAt={executed?.signedAt ?? null}
+            imageUrl={executed?.imageUrl ?? null}
+            locale={ctx.locale}
           />
           <SignatureSlot
             label="For the provider"
             name={organization.signatureBlockName}
             org={organization.legalName ?? organization.name}
             title={organization.signatureBlockTitle}
+            signedAt={null}
+            imageUrl={null}
+            locale={ctx.locale}
           />
         </div>
 
@@ -134,18 +154,43 @@ function SignatureSlot({
   name,
   org,
   title,
+  signedAt,
+  imageUrl,
+  locale,
 }: {
   label: string;
   name: string | null;
   org: string | null;
   title: string | null;
+  signedAt: Date | string | null;
+  imageUrl: string | null;
+  locale: string;
 }) {
+  const signedDate = signedAt
+    ? new Intl.DateTimeFormat(locale, {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
+      }).format(new Date(signedAt))
+    : null;
+
   return (
     <div>
       <p className="mb-6 font-mono text-[0.625rem] uppercase tracking-[0.16em] text-[var(--doc-fg-subtle)]">
         {label}
       </p>
-      <div className="h-16 border-b border-[var(--doc-border-strong)]" />
+      <div className="flex h-16 items-end border-b border-[var(--doc-border-strong)]">
+        {imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={imageUrl}
+            alt={`Signature of ${name ?? "signer"}`}
+            className="max-h-16 w-auto max-w-full object-contain object-left mix-blend-normal"
+            style={{ filter: "var(--signature-filter, none)" }}
+          />
+        ) : null}
+      </div>
       <dl className="mt-3 space-y-1 text-[0.875rem]">
         <div className="flex gap-2">
           <dt className="text-[var(--doc-fg-subtle)]">Name</dt>
@@ -163,7 +208,7 @@ function SignatureSlot({
         </div>
         <div className="flex gap-2">
           <dt className="text-[var(--doc-fg-subtle)]">Date</dt>
-          <dd className="text-[var(--doc-fg-muted)]">&nbsp;</dd>
+          <dd className="text-[var(--doc-fg-muted)]">{signedDate ?? "\u00A0"}</dd>
         </div>
       </dl>
     </div>

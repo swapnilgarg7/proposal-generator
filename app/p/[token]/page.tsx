@@ -63,6 +63,20 @@ export default async function PublicProposalPage({
       mode="web"
       interactive={!alreadyAccepted}
       locale="en-US"
+      executedSignature={
+        proposal.signature
+          ? {
+              signerName: proposal.signature.signerName,
+              signerTitle: proposal.signature.signerTitle,
+              signerEmail: proposal.signature.signerEmail,
+              signedAt: proposal.signature.signedAt,
+              method: proposal.signature.method,
+              imageUrl: proposal.signature.imageUrl,
+              emailVerified: proposal.signature.emailVerified,
+              reference: proposal.reference,
+            }
+          : null
+      }
       signatureAction={
         <AcceptancePanel
           token={token}
@@ -72,7 +86,8 @@ export default async function PublicProposalPage({
           requireTitle={sig.requireTitle}
           externalCtaLabel={sig.externalCtaLabel}
           alreadyAccepted={alreadyAccepted}
-          acceptedLabel={null}
+          reference={proposal.reference}
+          acceptedAt={proposal.acceptedAt ?? proposal.signature?.signedAt ?? null}
         />
       }
     />
