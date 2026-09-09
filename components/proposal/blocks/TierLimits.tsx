@@ -46,7 +46,7 @@ export function TierLimits({ data }: { data: TierLimitsBlock }) {
                   Paid tier
                 </p>
                 <p className="text-[0.9375rem] font-medium leading-snug text-[var(--doc-fg)]">
-                  {row.paidLimit ?? "—"}
+                  {row.paidLimit ?? "–"}
                 </p>
                 {row.paidPriceNote ? (
                   <p className="mt-2 font-mono text-[0.8125rem] tabular-nums text-[var(--doc-fg-muted)]">

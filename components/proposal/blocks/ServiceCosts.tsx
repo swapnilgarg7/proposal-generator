@@ -53,7 +53,7 @@ export function ServiceCosts({ data, ctx }: { data: ServiceCostsBlock; ctx: DocC
                     ) : null}
                   </Td>
                   <Td>
-                    <span className="text-[var(--doc-fg-muted)]">{row.planName ?? "—"}</span>
+                    <span className="text-[var(--doc-fg-muted)]">{row.planName ?? "–"}</span>
                     {row.notes ? (
                       <span className="mt-0.5 block text-[0.8125rem] leading-snug text-[var(--doc-fg-subtle)]">
                         {row.notes}
@@ -61,7 +61,7 @@ export function ServiceCosts({ data, ctx }: { data: ServiceCostsBlock; ctx: DocC
                     ) : null}
                   </Td>
                   <Td align="right" mono>
-                    {row.setupCostMinor > 0 ? money(row.setupCostMinor) : "—"}
+                    {row.setupCostMinor > 0 ? money(row.setupCostMinor) : "–"}
                   </Td>
                   <Td align="right" mono>
                     {row.monthlyCostMinor > 0 ? money(row.monthlyCostMinor) : "Free"}
@@ -84,7 +84,7 @@ export function ServiceCosts({ data, ctx }: { data: ServiceCostsBlock; ctx: DocC
                     </span>
                   </Td>
                   <Td align="right" mono>
-                    {totals.clientSetupMinor > 0 ? money(totals.clientSetupMinor) : "—"}
+                    {totals.clientSetupMinor > 0 ? money(totals.clientSetupMinor) : "–"}
                   </Td>
                   <Td align="right" mono>
                     <span className="font-semibold text-[var(--doc-fg)]">

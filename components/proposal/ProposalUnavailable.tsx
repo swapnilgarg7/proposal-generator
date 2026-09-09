@@ -17,7 +17,7 @@ const COPY: Record<string, { title: string; body: string }> = {
   },
   corrupt: {
     title: "We couldn't load this proposal",
-    body: "Something is wrong on our side. The sender has been notified — please contact them directly.",
+    body: "Something is wrong on our side. The sender has been notified, so please contact them directly.",
   },
 };
 

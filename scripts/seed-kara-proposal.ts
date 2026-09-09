@@ -161,6 +161,14 @@ async function main() {
             },
             {
               id: "d3",
+              name: "Reusable campaign configuration",
+              description:
+                "The script, the three questions, the lead list, the calendar and the caller ID are stored as configuration rather than baked into the agent. Pointing it at a different ICP is a config change, not a rebuild, and the walkthrough video covers how to do it yourself.",
+              acceptanceCriteria:
+                "You change the script on a test campaign without touching any code.",
+            },
+            {
+              id: "d3b",
               name: "Voice selection",
               description:
                 "A stock voice from Vapi's library, chosen with you and tested on real calls before we go live.",
@@ -217,21 +225,67 @@ async function main() {
       ],
       outOfScope: [
         "Buying or scraping the lead list",
+        "Writing scripts for additional ICPs. The system runs as many campaigns as you like; each new script is scoped separately",
         "The actual SEO or AI visibility work you sell on the call",
-        "Ongoing campaign management after handover — available as a separate monthly retainer",
-        "Inbound call handling — can be added later, it reuses most of the same setup",
+        "Ongoing campaign management after handover. Available as a separate monthly retainer",
+        "Inbound call handling. Can be added later, it reuses most of the same setup",
       ],
       clientResponsibilities: [
         "The lead list, with business name, phone, and owner name where you have it",
         "Google Calendar access for booking",
         "Access to your Twilio and Vapi accounts, or an invite to them",
         "Sign off on the script before we go live",
+        "A separate phone number per ICP if you plan to run campaigns concurrently, at roughly $1 to $2 a month each",
       ],
       assumptions: [
         "Calls are B2B, to businesses rather than residences",
         "Your existing Twilio number is in good standing and usable for outbound",
         "Lead volume stays around 500 dials per month",
       ],
+    },
+  });
+
+  // ── Reuse across ICPs ──────────────────────────────────────────
+  // Added after Kara asked whether the agent could be reused for other ICPs,
+  // and run concurrently. It is a buying signal, so the document should answer
+  // it rather than leaving it to a reply she has to go find later.
+  blocks.push({
+    type: "RICH_TEXT",
+    data: {
+      eyebrow: "Reuse",
+      title: "Running this for more than one ICP",
+      body: doc(
+        p(
+          "Yes to both parts: the script is interchangeable, and campaigns can run at the same time. Worth being precise about what that means in practice.",
+        ),
+        heading("Swapping the script"),
+        p(
+          "The script and the three qualifying questions live in configuration, not baked into the agent. Pointing it at a different ICP means editing a few fields, not rebuilding anything. The walkthrough video covers how, so you can add a vertical yourself without coming back to me.",
+        ),
+        heading("Running campaigns concurrently"),
+        p(
+          "Each campaign carries its own script, questions, lead list, calendar and caller ID, and they run side by side. Four things are worth knowing before you do:",
+        ),
+        {
+          type: "bulletList",
+          content: [
+            "Use a separate phone number per ICP. You do not technically have to, but one number dialling care homes and, say, dentists picks up spam flags faster and your answer rate drops. Numbers are roughly $1 to $2 a month on Twilio, which makes this the cheapest insurance you will buy.",
+            "Concurrency has a ceiling. Vapi limits how many calls run at once depending on your plan. Worth checking yours before running several campaigns at full tilt, otherwise they quietly queue behind each other rather than failing visibly.",
+            "Do-not-call suppression is global, not per campaign. If someone tells one campaign to remove them, no other campaign will dial them. That is both the right thing and the safer position if anyone ever asks.",
+            "Give each campaign its own booking calendar, or accept the occasional double-book. Two campaigns writing to one calendar at the same moment can collide.",
+          ].map((text) => ({
+            type: "listItem",
+            content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+          })),
+        },
+        heading("What this costs"),
+        p(
+          "The system handling multiple campaigns is included in every package. It is a design decision rather than extra work, and it is cheaper to build in now than to retrofit later.",
+        ),
+        p(
+          "What is not free is the script itself. Writing and tuning a genuinely good opener for a new ICP is real work, and a weak script on a strong system still will not book. You can write them yourself off the walkthrough, or I can scope them per vertical.",
+        ),
+      ),
     },
   });
 
@@ -261,6 +315,7 @@ async function main() {
             { id: "s3", label: "Dialling setup on your existing Twilio number", included: true },
             { id: "s4", label: "Voice", included: true, detail: "Stock voice from Vapi's library, chosen with you" },
             { id: "s5", label: "Google Sheets as the lead list and results log", included: true },
+            { id: "s5b", label: "Script and questions stored as configuration", included: true, detail: "Swap ICP without a rebuild" },
             { id: "s6", label: "Booking", included: true, detail: "Cal.com link sent by email after a positive call" },
             { id: "s7", label: "Call transcripts and recordings stored and linked in the sheet", included: true },
             { id: "s8", label: "Retry logic for no answer, up to 2 attempts", included: true },
@@ -282,7 +337,7 @@ async function main() {
             { id: "c1", label: "Everything in Starter", included: true },
             { id: "c3", label: "Live calendar booking during the call", included: true, detail: "Agent reads real availability and confirms the slot before hanging up" },
             { id: "c4", label: "Full gatekeeper playbook", included: true, detail: "Multiple branches, callback time capture, decision maker name capture" },
-            { id: "c5", label: "DNC and do-not-call suppression list", included: true, detail: "A “remove me” is never dialled again" },
+            { id: "c5", label: "Global DNC and do-not-call suppression", included: true, detail: "A “remove me” on one campaign is never dialled by another" },
             { id: "c6", label: "Daily post-call summary", included: true, detail: "Email or WhatsApp" },
             { id: "c7", label: "Dashboard view", included: true, detail: "Dials, connects, bookings, conversion, all in one sheet" },
             { id: "c8", label: "Support after handover", included: true, detail: "14 days of bug fixes" },

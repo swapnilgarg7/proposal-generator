@@ -92,7 +92,7 @@ export function SignatureBlock({
 
           <p className="mt-7 border-t border-[var(--doc-border)] pt-5 text-[0.8125rem] leading-relaxed text-[var(--doc-fg-subtle)]">
             Approving here records your agreement to this scope. It is not an electronic signature,
-            and it does not by itself create a binding contract &mdash; that happens when the{" "}
+            and it does not by itself create a binding contract. That happens when the{" "}
             {providerName} contract is accepted.
           </p>
         </div>
@@ -194,7 +194,7 @@ function SignatureSlot({
       <dl className="mt-3 space-y-1 text-[0.875rem]">
         <div className="flex gap-2">
           <dt className="text-[var(--doc-fg-subtle)]">Name</dt>
-          <dd className="text-[var(--doc-fg)]">{name ?? "—"}</dd>
+          <dd className="text-[var(--doc-fg)]">{name ?? "–"}</dd>
         </div>
         {title ? (
           <div className="flex gap-2">
@@ -204,7 +204,7 @@ function SignatureSlot({
         ) : null}
         <div className="flex gap-2">
           <dt className="text-[var(--doc-fg-subtle)]">For</dt>
-          <dd className="text-[var(--doc-fg-muted)]">{org ?? "—"}</dd>
+          <dd className="text-[var(--doc-fg-muted)]">{org ?? "–"}</dd>
         </div>
         <div className="flex gap-2">
           <dt className="text-[var(--doc-fg-subtle)]">Date</dt>
