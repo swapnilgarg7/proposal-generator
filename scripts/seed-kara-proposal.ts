@@ -22,7 +22,14 @@ import {
  */
 
 const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: process.env.DIRECT_URL }),
+  adapter: new PrismaPg({
+    connectionString: process.env.DIRECT_URL,
+    // Fail fast on a contended row instead of silently waiting out the server's
+    // statement timeout, which surfaces as an opaque 57014 rather than "locked".
+    lock_timeout: 10_000,
+    statement_timeout: 30_000,
+    idle_in_transaction_session_timeout: 30_000,
+  }),
 });
 
 const TITLE = "AI Voice Outbound Agent";
@@ -225,7 +232,6 @@ async function main() {
       ],
       outOfScope: [
         "Buying or scraping the lead list",
-        "Writing scripts for additional ICPs. The system runs as many campaigns as you like; each new script is scoped separately",
         "The actual SEO or AI visibility work you sell on the call",
         "Ongoing campaign management after handover. Available as a separate monthly retainer",
         "Inbound call handling. Can be added later, it reuses most of the same setup",
@@ -235,7 +241,6 @@ async function main() {
         "Google Calendar access for booking",
         "Access to your Twilio and Vapi accounts, or an invite to them",
         "Sign off on the script before we go live",
-        "A separate phone number per ICP if you plan to run campaigns concurrently, at roughly $1 to $2 a month each",
       ],
       assumptions: [
         "Calls are B2B, to businesses rather than residences",
@@ -246,9 +251,8 @@ async function main() {
   });
 
   // ── Reuse across ICPs ──────────────────────────────────────────
-  // Added after Kara asked whether the agent could be reused for other ICPs,
-  // and run concurrently. It is a buying signal, so the document should answer
-  // it rather than leaving it to a reply she has to go find later.
+  // Added after Kara asked whether the script is interchangeable and whether
+  // campaigns can run concurrently. Kept to what was actually answered.
   blocks.push({
     type: "RICH_TEXT",
     data: {
@@ -256,35 +260,20 @@ async function main() {
       title: "Running this for more than one ICP",
       body: doc(
         p(
-          "Yes to both parts: the script is interchangeable, and campaigns can run at the same time. Worth being precise about what that means in practice.",
+          "The script and the three qualifying questions live in configuration, not baked into the agent. Changing ICP means editing a few fields. I will build it that way from the start and cover it in the walkthrough video, so you can add a new vertical yourself later on if you want to.",
         ),
-        heading("Swapping the script"),
-        p(
-          "The script and the three qualifying questions live in configuration, not baked into the agent. Pointing it at a different ICP means editing a few fields, not rebuilding anything. The walkthrough video covers how, so you can add a vertical yourself without coming back to me.",
-        ),
-        heading("Running campaigns concurrently"),
-        p(
-          "Each campaign carries its own script, questions, lead list, calendar and caller ID, and they run side by side. Four things are worth knowing before you do:",
-        ),
+        p("You can also run multiple campaigns concurrently. Two suggestions if you do:"),
         {
-          type: "bulletList",
+          type: "orderedList",
           content: [
-            "Use a separate phone number per ICP. You do not technically have to, but one number dialling care homes and, say, dentists picks up spam flags faster and your answer rate drops. Numbers are roughly $1 to $2 a month on Twilio, which makes this the cheapest insurance you will buy.",
-            "Concurrency has a ceiling. Vapi limits how many calls run at once depending on your plan. Worth checking yours before running several campaigns at full tilt, otherwise they quietly queue behind each other rather than failing visibly.",
-            "Do-not-call suppression is global, not per campaign. If someone tells one campaign to remove them, no other campaign will dial them. That is both the right thing and the safer position if anyone ever asks.",
-            "Give each campaign its own booking calendar, or accept the occasional double-book. Two campaigns writing to one calendar at the same moment can collide.",
+            "Prefer a separate phone number per ICP. You do not technically have to, but one number dialling care homes and, say, dentists picks up spam flags faster and your answer rate drops. Numbers are roughly $1 to $2 a month on Twilio, so it is the cheapest insurance you will buy.",
+            "Do-not-call has to be global, not per campaign. If someone tells campaign A to remove them, campaign B must never dial them. I will build the suppression list to apply across everything. That is both the right thing and the safer position if anyone ever asks.",
           ].map((text) => ({
             type: "listItem",
             content: [{ type: "paragraph", content: [{ type: "text", text }] }],
           })),
         },
-        heading("What this costs"),
-        p(
-          "The system handling multiple campaigns is included in every package. It is a design decision rather than extra work, and it is cheaper to build in now than to retrofit later.",
-        ),
-        p(
-          "What is not free is the script itself. Writing and tuning a genuinely good opener for a new ICP is real work, and a weak script on a strong system still will not book. You can write them yourself off the walkthrough, or I can scope them per vertical.",
-        ),
+        p("The system handling multiple campaigns is included."),
       ),
     },
   });

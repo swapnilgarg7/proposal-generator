@@ -96,27 +96,44 @@ function renderNode(node: Node, key: string): ReactNode {
       );
     }
 
+    // List items are rendered by their parent rather than by a generic
+    // `listItem` case, because the marker differs: bullets get a drawn dot,
+    // numbered items get the browser's counter. Handling `listItem` generically
+    // produced both at once, so ordered items showed "• 1." with the number
+    // orphaned on its own line.
     case "bulletList":
       return (
         <ul key={key} className="mb-4 ml-1 space-y-2 last:mb-0">
-          {children}
+          {node.content?.map((item, i) => (
+            <li key={`${key}-${i}`} className="relative pl-5 leading-[1.7] [&>p]:mb-0">
+              <span
+                aria-hidden
+                className="absolute left-0 top-[0.6em] h-1.5 w-1.5 rounded-full bg-[var(--doc-accent)]"
+              />
+              {item.content?.map((c, j) => renderNode(c, `${key}-${i}-${j}`))}
+            </li>
+          ))}
         </ul>
       );
 
     case "orderedList":
       return (
-        <ol key={key} className="mb-4 ml-1 list-inside list-decimal space-y-2 last:mb-0 marker:text-[var(--doc-fg-subtle)]">
-          {children}
+        <ol
+          key={key}
+          className="mb-4 ml-5 list-outside list-decimal space-y-2 last:mb-0 marker:font-medium marker:text-[var(--doc-accent)]"
+        >
+          {node.content?.map((item, i) => (
+            <li key={`${key}-${i}`} className="pl-1.5 leading-[1.7] [&>p]:mb-0">
+              {item.content?.map((c, j) => renderNode(c, `${key}-${i}-${j}`))}
+            </li>
+          ))}
         </ol>
       );
 
+    // Reached only for a stray list item outside a list.
     case "listItem":
       return (
-        <li key={key} className="relative pl-5 leading-[1.7] [&>p]:mb-0">
-          <span
-            aria-hidden
-            className="absolute left-0 top-[0.6em] h-1.5 w-1.5 rounded-full bg-[var(--doc-accent)]"
-          />
+        <li key={key} className="leading-[1.7] [&>p]:mb-0">
           {children}
         </li>
       );

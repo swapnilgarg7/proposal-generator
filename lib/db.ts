@@ -31,6 +31,21 @@ function createPrismaClient() {
     // Fail a wedged query rather than holding a pooled connection forever.
     statement_timeout: 30_000,
     query_timeout: 30_000,
+
+    // Release locks held by a transaction whose client went away.
+    //
+    // Several paths here take `SELECT ... FOR UPDATE` on a proposal row to
+    // serialise signing and webhook handling. If the process is killed between
+    // BEGIN and COMMIT, Postgres leaves the session "idle in transaction"
+    // holding that row lock, and every later write to that proposal blocks
+    // until something reaps it. That is a wedged proposal, not a slow one.
+    // Observed exactly this after killing a dev server mid-request.
+    idle_in_transaction_session_timeout: 30_000,
+
+    // Wait briefly for a contended row, then fail. Without this a blocked
+    // statement burns the full statement_timeout before reporting anything,
+    // which reads as "the database is down" rather than "a row is locked".
+    lock_timeout: 10_000,
   });
 
   return new PrismaClient({
